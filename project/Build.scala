@@ -27,7 +27,6 @@ object Build extends Build {
 		dockerBaseImage := "localhost:5000/java7-base",
 		dockerExposedPorts in Docker := Seq(9090),
 		dockerRepository := Some("localhost:5000")
-		// dockerEntrypoint := Seq("/bin/bash")
 		)
 
 	lazy val root = project.in(file("."))
