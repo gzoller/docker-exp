@@ -29,6 +29,7 @@ object Build extends Build {
 		maintainer := "Greg Zoller <fake@nowhere.com>",
 		dockerBaseImage := "localhost:5000/java7-base",
 		dockerExposedPorts in Docker := Seq(9090),
+		dockerEntrypoint in Docker := Seq("sh", "-c", "CLUSTER_IP=`/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1 }'` bin/clustering $*")
 		dockerRepository := Some("localhost:5000")
 		)
 

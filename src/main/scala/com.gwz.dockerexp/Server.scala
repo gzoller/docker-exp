@@ -24,6 +24,16 @@ case class Service() {
 			respondWithMediaType(`application/json`) {
 				path( "ping" ) { 
 					complete{
+						s"""{"resp":"pong : $name""}"""
+					}
+				}
+				// ~path( "remoteping" ) { 
+				// 	complete{
+				// 		s"""{"resp":"pong : $name""}"""
+				// 	}
+				// }
+				~path( "members" ) { 
+					complete{
 						"""{"resp":"pong"}"""
 					}
 				}
