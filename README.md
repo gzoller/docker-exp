@@ -2,6 +2,16 @@
 
 A simple project to experiment with how to create Docker images using sbt with related plugins. The 'ping' branch is a simple /ping endpoint.  The /akka branch shows how to put an Akka cluster in a Docker container.
 
+To run the server:
+```sh
+docker run -d -p 9090:9090 --rm --name dexp localhost:5000/root:1.0.0 bin/root
+```
+
+And to join the running process to look around:
+```sh
+docker exec -i -t localhost:5000/root:1.0.0 /bin/bash
+```
+
 ### Mac
 Docker is Linux-specific (assumes Linux) so on a Mac we need to run a virtual machine.  Fortunately you can just use boot2docker.  In a boot2docker shell, install docker with apt-get.  Then pull down a local repo image and run it:
 

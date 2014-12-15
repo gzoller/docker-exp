@@ -4,14 +4,11 @@ import Keys._
 import com.typesafe.sbt.SbtNativePackager._
 import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
-// import com.typesafe.sbt.packager.Keys._
-// import DockerKeys._
 
 object Build extends Build {
 	import Dependencies._
 	import Versions._
 
-	// lazy val basicSettings = ScoverageSbtPlugin.instrumentSettings ++ Seq(
 	lazy val basicSettings = Seq(
  		organization 				:= "com.gwz",
 		description 				:= "Playing with Docker",
@@ -30,6 +27,7 @@ object Build extends Build {
 		dockerBaseImage := "localhost:5000/java7-base",
 		dockerExposedPorts in Docker := Seq(9090),
 		dockerRepository := Some("localhost:5000")
+		// dockerEntrypoint := Seq("/bin/bash")
 		)
 
 	lazy val root = project.in(file("."))
