@@ -4,12 +4,12 @@ A simple project to experiment with how to create Docker images using sbt with r
 
 To run the server:
 ```sh
-docker run -d -p 9090:9090 --rm --name dexp localhost:5000/root:1.0.0 bin/root
+docker run -d -p 9090:9090 --name dexp localhost:5000/root:1.0.0 bin/root
 ```
 
 And to join the running process to look around:
 ```sh
-docker exec -i -t localhost:5000/root:1.0.0 /bin/bash
+docker exec -i -t dexp /bin/bash
 ```
 
 ### Mac
