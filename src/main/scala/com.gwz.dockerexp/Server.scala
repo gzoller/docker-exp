@@ -27,7 +27,8 @@ case class Service() {
 					complete{
 						val now = (new java.util.Date()).toString()
 						(Seq("echo", now) #> new java.io.File("NOW")).!!
-						"""{"resp":"pong"}"""
+						val ip = HostIP.load().getOrElse("(unknown)")
+						s"""{"resp":"pong from $ip"}"""
 					}
 				}
 			}
