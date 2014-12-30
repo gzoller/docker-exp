@@ -20,6 +20,7 @@ trait DocSvr extends SimpleRoutingApp {
 }
 
 case class Service() {
+	val myHostname = java.net.InetAddress.getLocalHost().getHostAddress()
 	val route = 
 		get {  
 			respondWithMediaType(`application/json`) {
@@ -27,8 +28,7 @@ case class Service() {
 					complete{
 						val now = (new java.util.Date()).toString()
 						(Seq("echo", now) #> new java.io.File("NOW")).!!
-						val ip = HostIP.load().getOrElse("(unknown)")
-						s"""{"resp":"pong from $ip"}"""
+						s"""{"resp":"pong from $myHostname"}"""
 					}
 				}
 			}
