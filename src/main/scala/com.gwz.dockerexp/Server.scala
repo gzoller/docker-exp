@@ -8,7 +8,7 @@ import akka.stream.FlowMaterializer
 import akka.util.Timeout
 import scala.concurrent.duration._
 
-import akka.actor.ActorSystem
+import akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory }
 import scala.sys.process._
 
@@ -18,16 +18,23 @@ trait DocSvr {
 	var name = ""
 	val myHostname = java.net.InetAddress.getLocalHost().getHostAddress()
 	var myHttpUri = ""
+	var akkaUri:Address = null
 
 	def init() {
 		NodeConfig parseArgs appArgs map{ nc =>
 			val c = nc.config
+			//println(c)
+			name = c.getString("dkr.name")
 			val httpPort = c.getInt("http.port")
+			val akkaPort = c.getInt("dkr.port")
 			myHttpUri = "http://"+myHostname+":"+httpPort+"/"
-			system = ActorSystem( "dockerexp", 
-				ConfigFactory.load().withFallback(ConfigFactory.parseString(
-					s"""akka.remote.netty.tcp.hostname=$myHostname
-					    akka.remote.netty.tcp.port=2551""") ))
+			system = ActorSystem( "dockerexp", c)
+
+			akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
+			println("AKKA: "+akkaUri)
+
+			system.actorOf(Props(new TheActor(this)), "dockerexp")
+
 			HttpService(this, myHostname, httpPort)
 		}
 	}

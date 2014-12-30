@@ -1,7 +1,7 @@
 # Docker/Scala Experiments
 
-##NOTE: This branch moves from Spray to Akka HTTP
-It also introduces minimal parmater parsing (to set the http port)
+##NOTE: This branch gets simple remoting + HTTP going
+Run with: docker run -p 9100:9100 -p 9101:9101 -i -t localhost:5000/root --name Greg --hostIP 10.0.0.125 --hostPort 9100 --httpPort 9101
 
 A simple project to experiment with how to create Docker images using sbt with related plugins. The 'ping' branch is a simple /ping endpoint.  The /akka branch shows how to put an Akka cluster in a Docker container.
 

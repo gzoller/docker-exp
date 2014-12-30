@@ -9,18 +9,31 @@ import com.typesafe.config.ConfigFactory
 import akka.actor.{ActorSystem, ActorContext}
 import akka.pattern.ask
 import akka.util.Timeout
+import scala.language.postfixOps
 
-case class DocSvr2() extends DocSvr {
-	override def appArgs = Array("--httpPort","8101")
+case class TestServer() extends DocSvr {
+	override def appArgs = Array("--name","Fred","--hostPort","8100","--httpPort","8101")
 	init()
 }
 
 class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
-	var server = DocSvr2()
+	val server = TestServer()
 	implicit val t:Timeout = 15.seconds
-	println("SYS: "+server.system)
-	implicit val system:ActorSystem = server.system
+
+	val testConfig = ConfigFactory parseString """
+		akka {
+			loglevel = "ERROR"
+			stdout-loglevel = "ERROR"
+			loggers = ["akka.event.slf4j.Slf4jLogger"]
+			actor {
+				provider = akka.remote.RemoteActorRefProvider
+			}
+			remote {
+				enabled-transports = ["akka.remote.netty.tcp"]
+			}
+		}"""
+	implicit val ss = ActorSystem("test",testConfig)
 
 	override def beforeAll() {
 		val x = server.system // force creation of lazy object
@@ -28,15 +41,23 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
 	override def afterAll() {
 		Thread.sleep(1000)
-		server.system.shutdown
-		server.system.awaitTermination
-		assert(server.system.isTerminated)
+		stop(ss)
+		stop(server.system)
+	}
+
+	def stop( s:ActorSystem ) {
+		val whenTerminated = s.terminate
+		Await.result(whenTerminated, 5 seconds)
 	}
 
 	describe("========= Test It!") {
-		it("should work") {
+		it("should ping") {
 			println("Checking: "+server.myHttpUri+"ping")
 			println( Util.httpGet( server.myHttpUri+"ping" ) )
+		}
+		it("should akka") {
+			val actor = ss.actorSelection( server.akkaUri )
+			println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 15.seconds) )
 		}
 	}
 }

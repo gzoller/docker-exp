@@ -1,6 +1,6 @@
-#
-# WORKS for remoting!!!
-#
+
+This nearly worked...  got association error when trying to access it.
+
 akka {
 	loglevel = "ERROR"
 	stdout-loglevel = "ERROR"

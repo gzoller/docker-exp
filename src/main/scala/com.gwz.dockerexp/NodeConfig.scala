@@ -27,27 +27,30 @@ case class NodeConfig(
 		val httpPortValue = ConfigValueFactory fromAnyRef httpPort
 
 		// Host IP/port
-		val hostIPValue = ConfigValueFactory fromAnyRef java.net.InetAddress.getLocalHost().getHostAddress().toString() //hostIP
+		val hostIPValue = ConfigValueFactory fromAnyRef hostIP
 		val hostPortValue = ConfigValueFactory fromAnyRef hostPort
+		val localIP = java.net.InetAddress.getLocalHost().getHostAddress()
+		val localIPValue = ConfigValueFactory fromAnyRef localIP
 
 		// add seed nodes to config
-		val seedStart = {
-			if( isSeed ) Seq(s"${java.net.InetAddress.getLocalHost().getHostAddress()}:$hostPort") //Seq(s"$hostIP:$hostPort")
-			else Seq.empty[String]
-		}
-		val seedNodesString = seedStart.union(seeds).distinct.map { seedNode =>
-			s"""akka.cluster.seed-nodes += "akka.tcp://dockerexp@$seedNode""""  //"
-		}.mkString("\n")
-		val nodeRoleString = roles.map { role =>
-			s"""akka.cluster.roles += $role""" 
-		}.mkString("\n")
+		// val seedStart = {
+		// 	if( isSeed ) Seq(s"${java.net.InetAddress.getLocalHost().getHostAddress()}:$hostPort") //Seq(s"$hostIP:$hostPort")
+		// 	else Seq.empty[String]
+		// }
+		// val seedNodesString = seedStart.union(seeds).distinct.map { seedNode =>
+		// 	s"""akka.cluster.seed-nodes += "akka.tcp://dockerexp@$seedNode""""  //"
+		// }.mkString("\n")
+		// val nodeRoleString = roles.map { role =>
+		// 	s"""akka.cluster.roles += $role""" 
+		// }.mkString("\n")
 
 		// build the final config and resolve it
 		config
-			.withValue("server.name", serverNameValue)
-			.withValue("server.ip", hostIPValue)
-			.withValue("server.port", hostPortValue)
-			.withValue("http.port", httpPortValue)
+			.withValue("dkr.name",     serverNameValue)
+			.withValue("dkr.local",    localIPValue)
+			.withValue("dkr.hostname", hostIPValue)
+			.withValue("dkr.port",     hostPortValue)
+			.withValue("http.port",    httpPortValue)
 			.resolve
 	}
 
