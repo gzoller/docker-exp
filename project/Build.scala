@@ -19,7 +19,7 @@ object Build extends Build {
 		resolvers					++= Dependencies.resolutionRepos,
 		scalacOptions				:= Seq("-feature", "-deprecation", "-encoding", "UTF8", "-unchecked"),
 		testOptions in Test += Tests.Argument("-oDF"),
-		version 					:= "1.0.0"
+		version 					:= "latest"
 	)
 
 	lazy val dockerStuff = Seq(
@@ -35,8 +35,7 @@ object Build extends Build {
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				spray_routing, spray_client, spray_can, spray_caching,
-				typesafe_config, akka_actor, akka_remote, akka_slf4j, logback) ++ 
-			dep_test(scalatest, spray_client)
+				typesafe_config, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster, logback) ++ 
+			dep_test(scalatest)
 		)
 }

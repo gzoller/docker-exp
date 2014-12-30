@@ -1,33 +1,38 @@
 package com.gwz.dockerexp
 
+import akka.http.Http
+import akka.http.model._
+
 import akka.io.IO
 import akka.pattern.ask
 import akka.actor.ActorSystem
 import akka.util.Timeout
-
-import spray.can.Http
-import spray.http._
-import spray.httpx.RequestBuilding._
-import HttpMethods._
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import akka.stream.FlowMaterializer
+import akka.stream.scaladsl.{ Sink, Source }
+
 object Util {
 
-	def httpGet( uri:String )(implicit s:ActorSystem, timeout:Timeout = 30 seconds) = {
-		val resp = _http( Get(uri) )
-		(resp.entity.asString, resp.status)
-	}
-	def httpPost  ( url:String, payload:String, headers:Option[List[HttpHeader]] = None )(implicit system:ActorSystem) : HttpResponse = _http(HttpRequest(POST,   Uri(url), headers.getOrElse(Nil), HttpEntity(payload)))
-	def httpPut   ( url:String, payload:String, headers:Option[List[HttpHeader]] = None )(implicit system:ActorSystem) : HttpResponse = _http(HttpRequest(PUT,    Uri(url), headers.getOrElse(Nil), HttpEntity(payload)))
-	def httpDelete( url:String,                 headers:Option[List[HttpHeader]] = None )(implicit system:ActorSystem) : HttpResponse = _http(HttpRequest(DELETE, Uri(url), headers.getOrElse(Nil)))
+	def httpGet( uri:String )(implicit s:ActorSystem) = {
+		implicit val materializer = FlowMaterializer()
+		var r:HttpResponse = null
+		val req = HttpRequest(HttpMethods.GET, Uri(uri))
+		val host:String = req.uri.authority.host.toString
+		val port:Int = req.uri.effectivePort
+		val httpClient = Http().outgoingConnection(host,port).flow
+		val consumer = Sink.foreach[HttpResponse] { resp ⇒ r = resp }
+		val finishFuture = Source.single(req).via(httpClient).runWith(consumer)
+		Await.result(finishFuture, Duration("3 seconds"))
 
-	private def _http( hr:HttpRequest )(implicit s:ActorSystem, timeout:Timeout = 30 seconds) = {
-		val response: Future[HttpResponse] = (IO(Http) ? hr).mapTo[HttpResponse]
-		val allDone = Await.result( response, Duration.Inf )
-		allDone
-		}
+		// unpack result
+		(r.status.intValue,
+			Await.result(r.entity.toStrict(FiniteDuration(3,"seconds")), Duration("3 seconds") )
+				.data
+				.utf8String)
+	}
 }

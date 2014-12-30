@@ -9,8 +9,6 @@ import com.typesafe.config.ConfigFactory
 import akka.actor.{ActorSystem, ActorContext}
 import akka.pattern.ask
 import akka.util.Timeout
-import spray.http._
-import StatusCodes._
 
 trait DocSvr2 extends DocSvr {
 	override lazy val port = 9091

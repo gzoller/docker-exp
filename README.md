@@ -1,5 +1,7 @@
 # Docker/Scala Experiments
 
+##NOTE: This branch moves from Spray to Akka HTTP
+
 A simple project to experiment with how to create Docker images using sbt with related plugins. The 'ping' branch is a simple /ping endpoint.  The /akka branch shows how to put an Akka cluster in a Docker container.
 
 To run the server:
