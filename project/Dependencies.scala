@@ -20,6 +20,7 @@ object Dependencies {
 	val akka_streams	= "com.typesafe.akka" 		%% "akka-stream-experimental" % "1.0-M2"
 	val akka_http		= "com.typesafe.akka" 		%% "akka-http-core-experimental" % "1.0-M2"	
 	val typesafe_config	= "com.typesafe"			% "config"				% Config
+	val scopt			= "com.github.scopt" 		%% "scopt" 				% Scopt
 
 	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
 

@@ -12,15 +12,25 @@ import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
 import scala.sys.process._
 
-trait DocSvr extends App {
-	lazy val port = 9090
+trait DocSvr {
+	implicit var system:ActorSystem = null
+	def appArgs:Array[String] = Array.empty[String]
+	var name = ""
 	val myHostname = java.net.InetAddress.getLocalHost().getHostAddress()
-	val myHttpUri = "http://"+myHostname+":"+port+"/"
-	implicit val system = ActorSystem( "dockerexp", 
-		ConfigFactory.load().withFallback(ConfigFactory.parseString(
-			s"""akka.remote.netty.tcp.hostname=$myHostname
-			    akka.remote.netty.tcp.port=$port""") ))
-	HttpService(this, myHostname, port)
+	var myHttpUri = ""
+
+	def init() {
+		NodeConfig parseArgs appArgs map{ nc =>
+			val c = nc.config
+			val httpPort = c.getInt("http.port")
+			myHttpUri = "http://"+myHostname+":"+httpPort+"/"
+			system = ActorSystem( "dockerexp", 
+				ConfigFactory.load().withFallback(ConfigFactory.parseString(
+					s"""akka.remote.netty.tcp.hostname=$myHostname
+					    akka.remote.netty.tcp.port=2551""") ))
+			HttpService(this, myHostname, httpPort)
+		}
+	}
 }
 
 case class HttpService(svr:DocSvr, iface:String, port:Int) {
@@ -32,7 +42,7 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 	println("HTTP Service on port "+port)
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
-		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.myHostname} says pong"}""")
+		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
@@ -41,4 +51,6 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 }
 
 object Go extends App with DocSvr {
+	override def appArgs = args
+	init()
 }

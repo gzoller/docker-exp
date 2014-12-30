@@ -10,15 +10,17 @@ import akka.actor.{ActorSystem, ActorContext}
 import akka.pattern.ask
 import akka.util.Timeout
 
-trait DocSvr2 extends DocSvr {
-	override lazy val port = 9091
+case class DocSvr2() extends DocSvr {
+	override def appArgs = Array("--httpPort","8101")
+	init()
 }
 
 class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
-	var server = new DocSvr2(){}
+	var server = DocSvr2()
 	implicit val t:Timeout = 15.seconds
-	implicit var system:ActorSystem = server.system
+	println("SYS: "+server.system)
+	implicit val system:ActorSystem = server.system
 
 	override def beforeAll() {
 		val x = server.system // force creation of lazy object
