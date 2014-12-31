@@ -7,18 +7,34 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config.ConfigFactory
 import akka.actor.{ActorSystem, ActorContext}
+import java.net.InetAddress
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.language.postfixOps
 
-case class TestServer() extends DocSvr {
-	override def appArgs = Array("--name","Fred","--hostPort","8100","--httpPort","8101")
+package object MyAddr {
+	val myaddr = InetAddress.getLocalHost().getHostAddress()
+}
+import MyAddr._
+
+case class SeedServer() extends DocSvr {
+	override def appArgs = Array("--seed","--name","Fred","--hostIP",myaddr,"--hostPort","8100","--httpPort","8101")
+	init()
+}
+case class N1Server() extends DocSvr {
+	override def appArgs = Array("--name","Barney","--hostIP",myaddr,"--hostPort","8200","--httpPort","8201","--roles","node,n1",myaddr+":8100")
+	init()
+}
+case class N2Server() extends DocSvr {
+	override def appArgs = Array("--name","Wilma","--hostIP",myaddr,"--hostPort","8300","--httpPort","8301","--roles","node,n2",myaddr+":8100")
 	init()
 }
 
 class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
-	val server = TestServer()
+	val seed = SeedServer()
+	var n1:DocSvr = null
+	var n2:DocSvr = null
 	implicit val t:Timeout = 15.seconds
 
 	val testConfig = ConfigFactory parseString """
@@ -35,14 +51,11 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 		}"""
 	implicit val ss = ActorSystem("test",testConfig)
 
-	override def beforeAll() {
-		val x = server.system // force creation of lazy object
-	}
-
 	override def afterAll() {
 		Thread.sleep(1000)
 		stop(ss)
-		stop(server.system)
+		stop(seed.system)
+		stop(n1.system)
 	}
 
 	def stop( s:ActorSystem ) {
@@ -52,12 +65,26 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
 	describe("========= Test It!") {
 		it("should ping") {
-			println("Checking: "+server.myHttpUri+"ping")
-			println( Util.httpGet( server.myHttpUri+"ping" ) )
+			println("Checking: "+seed.myHttpUri+"ping")
+			println( Util.httpGet( seed.myHttpUri+"ping" ) )
 		}
 		it("should akka") {
-			val actor = ss.actorSelection( server.akkaUri )
-			println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 15.seconds) )
+			val actor = ss.actorSelection( seed.akkaUri+"/user/dockerexp" )
+			println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 7.seconds) )
+		}
+		it("should know its other nodes") {
+			n1 = N1Server()
+			n2 = N2Server()
+			Thread.sleep(2000)
+			Util.httpGet( n1.myHttpUri+"nodes" )._2.split(",").length should be(3)
+		}
+		it("send wire message") {
+			Util.httpGet( n1.myHttpUri+"wire" )._2 should equal("Wilma says 'you'")
+		}
+		it("kill one") {
+			stop(n2.system)
+			Thread.sleep(7000)
+			Util.httpGet( seed.myHttpUri+"nodes" )._2.split(",").length should be(2)
 		}
 	}
 }
