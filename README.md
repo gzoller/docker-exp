@@ -1,38 +1,38 @@
 # Docker/Scala Experiments
 
-##NOTE: This branch gets simple remoting + HTTP going
-Run with: docker run -p 9100:9100 -p 9101:9101 -i -t localhost:5000/root --name Greg --hostIP 10.0.0.125 --hostPort 9100 --httpPort 9101
+### Akka Cluster Application
+This is the main event--getting Akka clustering working with Docker.  We want to run Akka servers inside Docker containers, like the remoting example, but this time the clustering magic (like node discovery) has to work.  
 
-A simple project to experiment with how to create Docker images using sbt with related plugins. The 'ping' branch is a simple /ping endpoint.  The /akka branch shows how to put an Akka cluster in a Docker container.
+The principle magic here is that IP addresses inside a Docker container are internal-only.  They're useless outside the container.  Akka 2.4+ supports a bind-hostname/bind-port, meaning Akka can bind to >1 address.  In our case we'll use that new facility to bind to both the internal Docker IP (which we basically don't care about) and the external host's IP, which we'll pass in as a command-line parameter set when we launch Docker.
+
+You'll want to run 3 servers: 1 seed + 2 nodes for this example.  Node the different names, ports, and roles.
 
 To run the server:
 ```sh
-docker run -d -p 9090:9090 --name dexp localhost:5000/root:1.0.0 bin/root
-```
+docker run -p 9100:2551 -p 9101:8080 -d localhost:5000/root --seed --name Fred --hostIP 10.0.0.125 --hostPort 9100 --roles seed
 
-And to join the running process to look around:
+docker run -p 9200:2551 -p 9201:8080 -d localhost:5000/root --name Barney --hostIP 10.0.0.125 --hostPort 9200 --roles "node,n1" 10.0.0.125:9100
+
+docker run -p 9300:2551 -p 9301:8080 -d localhost:5000/root --name Wilma --hostIP 10.0.0.125 --hostPort 9300 --roles "node,n2" 10.0.0.125:9100
+```
+--hostIP is the local host machine's IP address
+
+--hostPort is the mapped port for the Akka server.  This is port 2551 inside Docker but is mapped with the -p parameter for docker run.  The --hostPort value must match the mapped value given for -p (or 9100 in this example).
+
+You can curl any of these nodes using their exposed/mapped HTTP ports:
 ```sh
-docker exec -i -t dexp /bin/bash
+curl 10.0.0.125:9101/ping
+curl 10.0.0.125:9201/ping
+curl 10.0.0.125:9301/ping
 ```
 
-### Mac
-Docker is Linux-specific (assumes Linux) so on a Mac we need to run a virtual machine.  Fortunately you can just use boot2docker.  In a boot2docker shell, install docker with apt-get.  Then pull down a local repo image and run it:
-
+You can see what nodes were discovered by looking at one of them:
 ```sh
-docker pull samalba/docker-registry
-docker run -d -p 5000:5000 samalba/docker-registry
+curl 10.0.0.125:9201/nodes
 ```
 
-Then you'll need to map your Mac's ports to the VM with this:
-
+Finally, you can intentionally send a message to node 1 that will (internally) have to send an Akka message to a remote/clustered actor running on node 2:
 ```sh
-VBoxManage controlvm boot2docker-vm natpf1 "name,tcp,127.0.0.1,1234,,1234"
+curl 10.0.0.125:9201/wire
 ```
-(where 1234 is the port you want to open.  Do this for port 9090 for this experiment.)
-
-###Cleanup
-Sometimes a Docker image gets "stuck" and you can't delete it.  Try this, then re-try the delete:
-
-```sh
-docker rm `docker ps -a -q`
-```
+This talks to node Barney (role n1) and should produce some message referening Wilma (role n2).
