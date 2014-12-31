@@ -7,7 +7,7 @@ case class NodeConfig(
 	name       : String      = "noname",
 	hostIP     : String      = "127.0.0.1",
 	hostPort   : Int         = 2551,
-	httpPort   : Int         = 9090,	// default fine inside Docker
+	httpPort   : Int         = 8080,	// default fine inside Docker
 	isSeed     : Boolean     = false,
 	roles      : Seq[String] = Seq.empty[String],
 	seeds      : Seq[String] = Seq.empty[String]
@@ -31,18 +31,6 @@ case class NodeConfig(
 		val hostPortValue = ConfigValueFactory fromAnyRef hostPort
 		val localIP = java.net.InetAddress.getLocalHost().getHostAddress()
 		val localIPValue = ConfigValueFactory fromAnyRef localIP
-
-		// add seed nodes to config
-		// val seedStart = {
-		// 	if( isSeed ) Seq(s"${java.net.InetAddress.getLocalHost().getHostAddress()}:$hostPort") //Seq(s"$hostIP:$hostPort")
-		// 	else Seq.empty[String]
-		// }
-		// val seedNodesString = seedStart.union(seeds).distinct.map { seedNode =>
-		// 	s"""akka.cluster.seed-nodes += "akka.tcp://dockerexp@$seedNode""""  //"
-		// }.mkString("\n")
-		// val nodeRoleString = roles.map { role =>
-		// 	s"""akka.cluster.roles += $role""" 
-		// }.mkString("\n")
 
 		// build the final config and resolve it
 		config
@@ -74,10 +62,6 @@ object NodeConfig {
 		help("help") text("prints this usage text")
 		arg[String]("<seedIP>...") unbounded() optional() action { (x,c) =>
 			c.copy(seeds = c.seeds :+ x)} text("list of seed node IP addresses")	
-		// checkConfig { c =>
-		// 	if( c.seeds.length == 0 && !c.isSeed ) failure("Must be at least one seed node specified.")
-		// 	else success
-		// }
 	}
 	def parseArgs( args:Array[String] ) = {
 		println("Parsing args: "+args.toList)

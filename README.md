@@ -1,38 +1,16 @@
 # Docker/Scala Experiments
 
-##NOTE: This branch gets simple remoting + HTTP going
-Run with: docker run -p 9100:9100 -p 9101:9101 -i -t localhost:5000/root --name Greg --hostIP 10.0.0.125 --hostPort 9100 --httpPort 9101
-
-A simple project to experiment with how to create Docker images using sbt with related plugins. The 'ping' branch is a simple /ping endpoint.  The /akka branch shows how to put an Akka cluster in a Docker container.
+### Akka Remoting Application
+This branch shows a simple remoting app w/Docker+Akka.  The idea is to run an Akka server inside a Docker container and be able to access it outside the container.  
 
 To run the server:
 ```sh
-docker run -d -p 9090:9090 --name dexp localhost:5000/root:1.0.0 bin/root
+docker run -d -p 9100:2551 -p 9101:8080 --rm="true" --name dexp localhost:5000/root --name Fred --hostIP 192.168.0.2 --hostPort 9100
 ```
+The first --name is the Docker container name.  The second --name (after localhost:5000/root) is the name of the Akka server name.
 
-And to join the running process to look around:
-```sh
-docker exec -i -t dexp /bin/bash
-```
+--hostIP is the local host machine's IP address
 
-### Mac
-Docker is Linux-specific (assumes Linux) so on a Mac we need to run a virtual machine.  Fortunately you can just use boot2docker.  In a boot2docker shell, install docker with apt-get.  Then pull down a local repo image and run it:
+--hostPort is the mapped port for the Akka server.  This is port 2551 inside Docker but is mapped with the -p parameter for docker run.  The --hostPort value must match the mapped value given for -p (or 9100 in this example).
 
-```sh
-docker pull samalba/docker-registry
-docker run -d -p 5000:5000 samalba/docker-registry
-```
-
-Then you'll need to map your Mac's ports to the VM with this:
-
-```sh
-VBoxManage controlvm boot2docker-vm natpf1 "name,tcp,127.0.0.1,1234,,1234"
-```
-(where 1234 is the port you want to open.  Do this for port 9090 for this experiment.)
-
-###Cleanup
-Sometimes a Docker image gets "stuck" and you can't delete it.  Try this, then re-try the delete:
-
-```sh
-docker rm `docker ps -a -q`
-```
+Configured this way you can curl the HTTP /ping endpoint on 192.168.0.2:9101 and send Akka messages ("hey" in this code) to 192.168.0.2:9100.
