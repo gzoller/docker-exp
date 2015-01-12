@@ -38,5 +38,9 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 			println("Checking: "+server.myHttpUri+"ping")
 			println( Util.httpGet( server.myHttpUri+"ping" ) )
 		}
+		it("should stats") {
+			println("Checking: "+server.myHttpUri+"stats")
+			println( Util.httpGet( server.myHttpUri+"stats" ) )
+		}
 	}
 }

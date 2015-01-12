@@ -43,11 +43,19 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
+		case HttpRequest(GET, Uri.Path("/stats"), _, _, _) => HttpResponse(entity = getStats())
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
 	val serverBinding = Http(system).bind(interface = iface, port = port)
 	serverBinding.connections foreach { connection => connection handleWith { Flow[HttpRequest] map requestHandler } }
+
+	private def getStats() = {
+		"Cores       : "+Runtime.getRuntime().availableProcessors()+"\n"+
+		"Free Memory : "+Runtime.getRuntime().freeMemory()+"\n"+
+		"Max Memory  : "+Runtime.getRuntime().maxMemory()+"\n"+
+		"Total Memory: "+Runtime.getRuntime().totalMemory()+"\n"
+	}
 }
 
 object Go extends App with DocSvr {

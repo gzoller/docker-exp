@@ -24,6 +24,8 @@ object Dependencies {
 
 	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
 
+	val twitter			= "com.twitter"				%% "util-jvm"		% Twitter
+
 	val scalatest 		= "org.scalatest" 			%% "scalatest"			% ScalaTest
 	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 		% Slf4j
 }

@@ -10,4 +10,5 @@ object Versions {
 	val ScalaTest       = "2.2.2"
 	val Slf4j           = "1.7.7"
 	val Scopt			= "3.3.0"
+	val Twitter		 	= "6.23.0"
 }

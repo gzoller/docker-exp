@@ -35,7 +35,7 @@ object Build extends Build {
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, scopt, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster, logback) ++ 
+				typesafe_config, twitter, scopt, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster, logback) ++ 
 			dep_test(scalatest)
 		)
 }
