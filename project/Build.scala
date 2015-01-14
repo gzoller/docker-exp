@@ -16,6 +16,7 @@ object Build extends Build {
 		scalaVersion 				:= Scala,
 		parallelExecution in Test 	:= false,
 		fork in Test 				:= true,
+		// javaOptions in Test         := Seq("-Xmx3m"),
 		resolvers					++= Dependencies.resolutionRepos,
 		scalacOptions				:= Seq("-feature", "-deprecation", "-encoding", "UTF8", "-unchecked"),
 		testOptions in Test += Tests.Argument("-oDF"),
@@ -35,7 +36,7 @@ object Build extends Build {
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, twitter, scopt, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster, logback) ++ 
+				typesafe_config, twitter, logback, scopt, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster) ++ 
 			dep_test(scalatest)
 		)
 }
