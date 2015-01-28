@@ -18,7 +18,7 @@ case class DocSvr2() extends DocSvr {
 class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
 	var server = DocSvr2()
-	implicit val t:Timeout = 15.seconds
+	implicit val t:Timeout = 5.minutes
 	println("SYS: "+server.system)
 	implicit val system:ActorSystem = server.system
 
@@ -37,7 +37,9 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 		it("should work") {
 			println("Checking: "+server.myHttpUri+"ping")
 			println( Util.httpGet( server.myHttpUri+"ping" ) )
+			system.log.error("Boom!")
 		}
+		/*
 		it("should stats") {
 			println("Checking: "+server.myHttpUri+"stats")
 			println( Util.httpGet( server.myHttpUri+"stats" ) )
@@ -45,5 +47,6 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 			println("Checking: "+server.myHttpUri+"stats")
 			println( Util.httpGet( server.myHttpUri+"stats" ) )
 		}
+		*/
 	}
 }

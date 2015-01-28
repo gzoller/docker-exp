@@ -23,6 +23,7 @@ object Dependencies {
 	val scopt			= "com.github.scopt" 		%% "scopt" 				% Scopt
 
 	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
+	val logback_core	= "ch.qos.logback" 			% "logback-core"		% Logback
 
 	val twitter			= "com.twitter"				%% "util-jvm"		% Twitter
 
