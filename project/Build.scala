@@ -23,11 +23,14 @@ object Build extends Build {
 		version 					:= "latest"
 	)
 
+	// errordeveloper/oracle-jdk
+	// errordeveloper/oracle-jre
 	lazy val dockerStuff = Seq(
 		maintainer := "Greg Zoller <fake@nowhere.com>",
-		dockerBaseImage := "localhost:5000/java7-base",
+		dockerBaseImage := "errordeveloper/oracle-jre",
 		dockerExposedPorts in Docker := Seq(9090),
 		dockerRepository := Some("localhost:5000")
+		// dockerEntrypoint in Docker := Seq("java")
 		)
 
 	lazy val root = project.in(file("."))
