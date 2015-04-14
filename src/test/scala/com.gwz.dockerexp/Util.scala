@@ -13,18 +13,18 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import akka.stream.FlowMaterializer
+import akka.stream.ActorFlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 
 object Util {
 
 	def httpGet( uri:String )(implicit s:ActorSystem) = {
-		implicit val materializer = FlowMaterializer()
+		implicit val materializer = ActorFlowMaterializer()
 		var r:HttpResponse = null
 		val req = HttpRequest(HttpMethods.GET, Uri(uri))
 		val host:String = req.uri.authority.host.toString
 		val port:Int = req.uri.effectivePort
-		val httpClient = Http().outgoingConnection(host,port).flow
+		val httpClient = Http().outgoingConnection(host,port)
 		val consumer = Sink.foreach[HttpResponse] { resp ⇒ r = resp }
 		val finishFuture = Source.single(req).via(httpClient).runWith(consumer)
 		Await.result(finishFuture, Duration("3 seconds"))

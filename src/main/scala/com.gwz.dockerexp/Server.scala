@@ -3,10 +3,11 @@ package com.gwz.dockerexp
 import akka.http.Http
 import akka.http.model._
 import akka.http.model.HttpMethods._
-import akka.stream.scaladsl.Flow
-import akka.stream.FlowMaterializer
+import akka.stream.scaladsl.{Flow,Sink,Source}
+import akka.stream.ActorFlowMaterializer
 import akka.util.Timeout
 import scala.concurrent.duration._
+import scala.concurrent.Future
 
 import akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -19,21 +20,20 @@ trait DocSvr {
 	val myHostname = java.net.InetAddress.getLocalHost().getHostAddress()
 	var myHttpUri = ""
 	var akkaUri:Address = null
+	var myActor:ActorRef = null
 
 	def init() {
 		NodeConfig parseArgs appArgs map{ nc =>
 			val c = nc.config
-			//println(c)
 			name = c.getString("dkr.name")
 			val httpPort = c.getInt("http.port")
-			val akkaPort = c.getInt("dkr.port")
 			myHttpUri = "http://"+myHostname+":"+httpPort+"/"
 			system = ActorSystem( "dockerexp", c)
 
 			akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
 			println("AKKA: "+akkaUri)
 
-			system.actorOf(Props(new TheActor(this)), "dockerexp")
+			myActor = system.actorOf(Props(new TheActor(this)), "dockerexp")
 
 			HttpService(this, myHostname, httpPort)
 		}
@@ -43,7 +43,7 @@ trait DocSvr {
 case class HttpService(svr:DocSvr, iface:String, port:Int) {
 
 	implicit val system = svr.system
-	implicit val materializer = FlowMaterializer()
+	implicit val materializer = ActorFlowMaterializer()
 	implicit val t:Timeout = 15.seconds
 
 	println("HTTP Service on port "+port)
@@ -53,8 +53,13 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
-	val serverBinding = Http(system).bind(interface = iface, port = port)
-	serverBinding.connections foreach { connection => connection handleWith { Flow[HttpRequest] map requestHandler } }
+	val serverSource: Source[Http.IncomingConnection, Future[Http.ServerBinding]] = 
+		Http(system).bind(interface = iface, port = port)
+	val bindingFuture: Future[Http.ServerBinding] = serverSource.to(Sink.foreach { connection =>
+		connection handleWithSyncHandler requestHandler
+		// this is equivalent to
+		// connection handleWith { Flow[HttpRequest] map requestHandler }
+	}).run()
 }
 
 object Go extends App with DocSvr {
