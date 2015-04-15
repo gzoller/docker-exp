@@ -8,6 +8,7 @@ import akka.stream.ActorFlowMaterializer
 import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.collection.JavaConverters._
 
 import akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -23,7 +24,7 @@ trait DocSvr {
 
 	def init() {
 		NodeConfig parseArgs appArgs map{ nc =>
-			val c:NodeConfig = nc.copy(hostIP = this.hostIP())
+			val c:Config = nc.copy(hostIP = this.hostIP()).config
 			name = c.getString("dkr.name")
 			val httpPort = c.getInt("http.port")
 			myHttpUri = "http://"+hostIP()+":"+httpPort+"/"
@@ -34,7 +35,7 @@ trait DocSvr {
 
 			myActor = system.actorOf(Props(new TheActor(this)), "dockerexp")
 
-			HttpService(this, myHostname, httpPort)
+			HttpService(this, java.net.InetAddress.getLocalHost().getHostAddress(), httpPort)
 		}
 	}
 
@@ -52,6 +53,9 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
 		case HttpRequest(GET, Uri.Path("/ip"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says ${svr.hostIP()}"}""")
+		case HttpRequest(GET, Uri.Path("/ip2"), _, _, _)  => 
+			val ipEnv = System.getenv().get("HOST_IP")
+			HttpResponse(entity = s"""{"resp":"${svr.name} says $ipEnv"}""")
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
