@@ -17,17 +17,16 @@ trait DocSvr {
 	implicit var system:ActorSystem = null
 	def appArgs:Array[String] = Array.empty[String]
 	var name = ""
-	val myHostname = java.net.InetAddress.getLocalHost().getHostAddress()
 	var myHttpUri = ""
 	var akkaUri:Address = null
 	var myActor:ActorRef = null
 
 	def init() {
 		NodeConfig parseArgs appArgs map{ nc =>
-			val c = nc.config
+			val c:NodeConfig = nc.copy(hostIP = this.hostIP())
 			name = c.getString("dkr.name")
 			val httpPort = c.getInt("http.port")
-			myHttpUri = "http://"+myHostname+":"+httpPort+"/"
+			myHttpUri = "http://"+hostIP()+":"+httpPort+"/"
 			system = ActorSystem( "dockerexp", c)
 
 			akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
@@ -38,6 +37,8 @@ trait DocSvr {
 			HttpService(this, myHostname, httpPort)
 		}
 	}
+
+	def hostIP() = java.net.InetAddress.getByName("dockerhost").getHostAddress.toString
 }
 
 case class HttpService(svr:DocSvr, iface:String, port:Int) {
@@ -50,6 +51,7 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
+		case HttpRequest(GET, Uri.Path("/ip"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says ${svr.hostIP()}"}""")
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
