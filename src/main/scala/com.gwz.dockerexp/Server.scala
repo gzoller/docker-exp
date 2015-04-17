@@ -9,6 +9,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 import akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -39,7 +40,7 @@ trait DocSvr {
 		}
 	}
 
-	def hostIP() = java.net.InetAddress.getByName("dockerhost").getHostAddress.toString
+	def hostIP() = Try( java.net.InetAddress.getByName("dockerhost").getHostAddress.toString ).toOption.getOrElse(System.getenv().get("HOST_IP"))
 }
 
 case class HttpService(svr:DocSvr, iface:String, port:Int) {
