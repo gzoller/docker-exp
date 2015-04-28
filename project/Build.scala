@@ -9,6 +9,8 @@ object Build extends Build {
 	import Dependencies._
 	import Versions._
 
+	val IP = java.net.InetAddress.getLocalHost().getHostAddress()
+
 	lazy val basicSettings = Seq(
  		organization 				:= "com.gwz",
 		description 				:= "Playing with Docker",
@@ -16,6 +18,7 @@ object Build extends Build {
 		scalaVersion 				:= Scala,
 		parallelExecution in Test 	:= false,
 		fork in Test 				:= true,
+		javaOptions in Test         := Seq("-DINST_NAME=Fred", s"-DCLUSTER_IP=$IP", "-DCLUSTER_PORT=8100", "-DHTTP_PORT=8101"),
 		resolvers					++= Dependencies.resolutionRepos,
 		scalacOptions				:= Seq("-feature", "-deprecation", "-encoding", "UTF8", "-unchecked"),
 		testOptions in Test += Tests.Argument("-oDF"),
@@ -25,8 +28,8 @@ object Build extends Build {
 	lazy val dockerStuff = Seq(
 		maintainer := "Greg Zoller <fake@nowhere.com>",
 		dockerBaseImage := "errordeveloper/oracle-jre",
-		dockerExposedPorts in Docker := Seq(9090),
-		dockerRepository := Some("quay.io/gzoller")  // Must log into quay.io from docker command-line before doing docker:publish!
+		dockerRepository := Some("quay.io/gzoller"),  // Must log into quay.io from docker command-line before doing docker:publish!
+		dockerExposedPorts in Docker := Seq(2551,8080)
 		)
 
 	lazy val root = project.in(file("."))
@@ -35,7 +38,7 @@ object Build extends Build {
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, scopt, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, akka_cluster, logback) ++ 
+				typesafe_config, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, logback) ++ 
 			dep_test(scalatest)
 		)
 }

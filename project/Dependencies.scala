@@ -16,11 +16,9 @@ object Dependencies {
 	val akka_actor		= "com.typesafe.akka"		%% "akka-actor"		% Akka
 	val akka_slf4j 		= "com.typesafe.akka" 		%% "akka-slf4j"		% Akka
 	val akka_remote		= "com.typesafe.akka" 		%% "akka-remote"	% Akka
-	val akka_cluster	= "com.typesafe.akka" 		%% "akka-cluster" 	% Akka
 	val akka_streams	= "com.typesafe.akka" 		%% "akka-stream-experimental" % "1.0-M5"
 	val akka_http		= "com.typesafe.akka" 		%% "akka-http-core-experimental" % "1.0-M5"	
 	val typesafe_config	= "com.typesafe"			% "config"				% Config
-	val scopt			= "com.github.scopt" 		%% "scopt" 				% Scopt
 
 	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
 

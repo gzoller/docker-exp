@@ -9,5 +9,4 @@ object Versions {
 	val Scala           = "2.10.4"
 	val ScalaTest       = "2.2.2"
 	val Slf4j           = "1.7.7"
-	val Scopt			= "3.3.0"
 }

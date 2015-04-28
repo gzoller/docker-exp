@@ -11,10 +11,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.language.postfixOps
 
-case class TestServer() extends DocSvr {
-	override def appArgs = Array("--name","Fred","--hostIP","172.16.240.141","--hostPort","8100","--httpPort","8101")
-	init()
-}
+case class TestServer() extends DocSvr 
 
 class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 

@@ -12,35 +12,18 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 import akka.actor._
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import scala.sys.process._
 
 trait DocSvr {
-	implicit var system:ActorSystem = null
-	def appArgs:Array[String] = Array.empty[String]
-	var name = ""
-	var myHttpUri = ""
-	var akkaUri:Address = null
-	var myActor:ActorRef = null
-
-	def init() {
-		NodeConfig parseArgs appArgs map{ nc =>
-			val c:Config = nc.copy(hostIP = this.hostIP()).config
-			name = c.getString("dkr.name")
-			val httpPort = c.getInt("http.port")
-			myHttpUri = "http://"+hostIP()+":"+httpPort+"/"
-			system = ActorSystem( "dockerexp", c)
-
-			akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
-			println("AKKA: "+akkaUri)
-
-			myActor = system.actorOf(Props(new TheActor(this)), "dockerexp")
-
-			HttpService(this, java.net.InetAddress.getLocalHost().getHostAddress(), httpPort)
-		}
-	}
-
-	def hostIP() = Try( java.net.InetAddress.getByName("dockerhost").getHostAddress.toString ).toOption.getOrElse(System.getenv().get("HOST_IP"))
+	val c = ConfigFactory.load().withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(java.net.InetAddress.getLocalHost().getHostAddress()))
+	val name = System.getenv().get("INST_NAME")
+	val myHttpUri = s"""http://${c.getString("akka.remote.netty.tcp.bind-hostname")}:${c.getInt("settings.http")}/"""
+	implicit val system = ActorSystem( "dockerexp", c)
+	val akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
+	println("AKKA: "+akkaUri)
+	val	myActor = system.actorOf(Props(new TheActor(this)), "dockerexp")
+	HttpService(this, java.net.InetAddress.getLocalHost().getHostAddress(), c.getInt("settings.http"))
 }
 
 case class HttpService(svr:DocSvr, iface:String, port:Int) {
@@ -53,10 +36,7 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
-		case HttpRequest(GET, Uri.Path("/ip"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says ${svr.hostIP()}"}""")
-		case HttpRequest(GET, Uri.Path("/ip2"), _, _, _)  => 
-			val ipEnv = System.getenv().get("HOST_IP")
-			HttpResponse(entity = s"""{"resp":"${svr.name} says $ipEnv"}""")
+		case HttpRequest(GET, Uri.Path("/uri"), _, _, _)  => HttpResponse(entity = svr.akkaUri.toString)
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
@@ -69,7 +49,4 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 	}).run()
 }
 
-object Go extends App with DocSvr {
-	override def appArgs = args
-	init()
-}
+object Go extends App with DocSvr
