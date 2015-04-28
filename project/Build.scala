@@ -29,7 +29,7 @@ object Build extends Build {
 		maintainer := "Greg Zoller <fake@nowhere.com>",
 		dockerBaseImage := "errordeveloper/oracle-jre",
 		dockerRepository := Some("quay.io/gzoller"),  // Must log into quay.io from docker command-line before doing docker:publish!
-		dockerExposedPorts in Docker := Seq(2551,8080)
+		dockerExposedPorts := Seq(2551,8080)
 		)
 
 	lazy val root = project.in(file("."))
