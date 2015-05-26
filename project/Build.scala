@@ -4,6 +4,7 @@ import Keys._
 import com.typesafe.sbt.SbtNativePackager._
 import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
+import com.typesafe.sbt.packager.docker._
 
 object Build extends Build {
 	import Dependencies._
@@ -38,7 +39,7 @@ object Build extends Build {
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, logback) ++ 
+				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, logback) ++ 
 			dep_test(scalatest)
 		)
 }

@@ -15,11 +15,22 @@ import akka.actor._
 import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
 import scala.sys.process._
 
+// For Akka to work in Docker we must get 2 critical pieces of information:
+//    Host's IP (outside the Docker)
+//    Akka port (outside the Docker) for dual-binding
+
 trait DocSvr {
-	val c = ConfigFactory.load().withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(java.net.InetAddress.getLocalHost().getHostAddress()))
-	val name = System.getenv().get("INST_NAME")
+	val ipAndPort = IpAndPort()
+	println("Host IP  : "+ipAndPort.hostIP)
+	println("Akka Port: "+ipAndPort.akkaPort)
+
+	val c = ConfigFactory.load()
+		.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(java.net.InetAddress.getLocalHost().getHostAddress()))
+		.withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(ipAndPort.hostIP))
+		.withValue("akka.remote.netty.tcp.port", ConfigValueFactory.fromAnyRef(ipAndPort.akkaPort))
+	val name = c.getString("settings.name")
 	val myHttpUri = s"""http://${c.getString("akka.remote.netty.tcp.bind-hostname")}:${c.getInt("settings.http")}/"""
-	implicit val system = ActorSystem( "dockerexp", c)
+	implicit val system = ActorSystem( "dockerexp", c )
 	val akkaUri = system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress
 	println("AKKA: "+akkaUri)
 	val	myActor = system.actorOf(Props(new TheActor(this)), "dockerexp")
@@ -37,6 +48,12 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.name} says pong"}""")
 		case HttpRequest(GET, Uri.Path("/uri"), _, _, _)  => HttpResponse(entity = svr.akkaUri.toString)
+		case HttpRequest(GET, Uri.Path("/info"), _, _, _)  => {
+			val info = "Public IPV4: "+Util.httpGet( "http://169.254.169.254/latest/meta-data/public-ipv4" ) + // <<-- This one for AWS!  Host's IP
+				"\nUser: "+System.getProperty("user.name")+
+				"\n"
+			HttpResponse(entity = info)
+		}
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 

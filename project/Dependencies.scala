@@ -18,10 +18,11 @@ object Dependencies {
 	val akka_remote		= "com.typesafe.akka" 		%% "akka-remote"	% Akka
 	val akka_streams	= "com.typesafe.akka" 		%% "akka-stream-experimental" % "1.0-M5"
 	val akka_http		= "com.typesafe.akka" 		%% "akka-http-core-experimental" % "1.0-M5"	
-	val typesafe_config	= "com.typesafe"			% "config"				% Config
+	val typesafe_config	= "com.typesafe"			% "config"			% Config
 
-	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
+	val scalajack		= "co.blocke"				%% "scalajack"		% ScalaJack
+	val logback			= "ch.qos.logback" 			% "logback-classic"	% Logback
 
-	val scalatest 		= "org.scalatest" 			%% "scalatest"			% ScalaTest
-	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 		% Slf4j
+	val scalatest 		= "org.scalatest" 			%% "scalatest"		% ScalaTest
+	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 	% Slf4j
 }

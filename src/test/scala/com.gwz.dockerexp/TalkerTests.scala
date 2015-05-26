@@ -11,11 +11,8 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.language.postfixOps
 
-case class TestServer() extends DocSvr 
+class TalkerTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
-class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
-
-	val server = TestServer()
 	implicit val t:Timeout = 15.seconds
 
 	val testConfig = ConfigFactory parseString """
@@ -30,20 +27,15 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 				enabled-transports = ["akka.remote.netty.tcp"]
 				netty.tcp {
 					hostname = "localhost"
-					port     = 5151
+					port     = 5152
 				}
 			}
 		}"""
 	implicit val ss = ActorSystem("test",testConfig)
 
-	override def beforeAll() {
-		val x = server.system // force creation of lazy object
-	}
-
 	override def afterAll() {
 		Thread.sleep(1000)
 		stop(ss)
-		stop(server.system)
 	}
 
 	def stop( s:ActorSystem ) {
@@ -51,18 +43,11 @@ class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 		Await.result(whenTerminated, 5 seconds)
 	}
 
-	describe("========= Test It!") {
-		it("should ping") {
-			println("Checking: "+server.myHttpUri+"ping")
-			println( Util.httpGet( server.myHttpUri+"ping" ) )
+	describe("========= Talker Tests") {
+		it("should talk to remote node") {
+			val HOST_IP = "52.11.63.42" // put AWS host IP here
+			val actor = ss.actorSelection(s"akka.tcp://dockerexp@$HOST_IP:9101/user/dockerexp")
+			println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 15.seconds) )
 		}
-		// Doesn't work locally for some reason!  Seems to be fine in a Docker image
-		// it("should akka") {
-		// 	println("Addr: "+server.akkaUri.toString+"/user/dockerexp")
-		// 	// val actor = ss.actorSelection( server.akkaUri.toString+"/user/dockerexp" )
-		// 	val actor = ss.actorSelection( "akka.tcp://dockerexp@172.16.240.141:8100/user/dockerexp" )
-		// 	println("Selection: "+actor)
-		// 	println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 5.seconds) )
-		// }
 	}
 }
