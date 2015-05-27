@@ -1,23 +1,26 @@
 # Docker/Scala Experiments
 
 ### Akka Remoting Application
-This branch shows a simple remoting app w/Docker+Akka.  The idea is to run an Akka server inside a Docker container and be able to access it outside the container.  For this mode to work, however, you must know and specify the IP of the host this Docker is running on.  If you don't know it (e.g. if this is running in some aggregator like Mesos then this won't work).
+This branch shows a simple Akka remoting app w/Docker.  The idea is to run an Akka server inside a Docker container and be able to access it outside the container.  In principle this should be easy but in practice has some interesting complexities driven by Docker's encapsulation of networking.
 
-To run the server:
+From Akka's perspective, Docker networking is basically a NAT, which it doesn't handle--at least not until version 2.4 (SNAPSHOT available at time of this writing).  Akka 2.4 provides "dual binding" where you can bind to a host/ip inside a Docker container and also bind to the external host/ip outside (i.e. the Docker's host).
+
+This sample uses 2.4's latest support for dual-binding.  To build the example modify the Quay info to your own account in Build.scala and do:
+
 ```sh
-docker run -e "INST_NAME=Fred" -e "HOST_IP=`./getMyIP.sh`" --rm=true -p 1600:2551 -p 8080:8080 quay.io/gzoller/root
+sbt docker:publish
 ```
-The INST_NAME variable is just a label for display purposes of this sample application.  Nothing special about it.
 
-In order for Akka remoting to work it has to know its actual IP address, which is problematic in Docker.  Inside the container there's no way to get this information (it'll have its own IP address, which is useless for this).  We must pass in the host's IP address.  We do this with the --add-host argument, using a script (or any Unix command) that returns the host's IP address.  This will insert a record into Docker's /etc/hosts under the name 'dockerhost' (don't change this!).
+To run the server on your target Docker-enabled environment:
+```sh
+sudo docker run --rm=true -e "HOST_IP=`./getMyIP.sh`" -e "HOST_PORT=9101" -p 9101:2551 -p 9100:8080 quay.io/gzoller/root
+```
 
-(For AWS, this *might* work: wget -qO- http://instance-data/latest/meta-data/public-ipv4)
+In order for Akka remoting to work it has to know its actual IP address, which is problematic in Docker.  Inside the container there's no easy way to get this information.  It'll have its own IP address, which is useless for our needs here.  We must pass in the host's IP address.  We do this with the -e argument and either the specific IP or in this case calling a shell script to obtain the IP address of the host.  This will create a HOST_IP environment variable set to the host's IP that is visible inside the container.
 
-The -e argument accomplishes the same thing a different way -- you don't need both -add-host and -e.  One way or t'other you need to obtain and pass in the host's IP address as this cannot be introspected from inside the Docker instance.
+The sane challenges exist for the Akka port.  We map the internal Akka port of 2551 to an externally visible port of 9101 with the -p argument, but just as for the host's IP we must pass this port into the container as well with the HOST_PORT environment variable created with another -e argument.  *The port value sent in with -e must match the -p value, or 9101 in this case.*
 
-You can also pass -e "HOST_PORT=9100" to map the port for the Akka server.  This is port 2551 inside Docker but is mapped with the -p parameter for docker run.  The HOST_PORT's value must match the mapped value given for -p (or 9100 in this example).
-
-Configured this way you can curl the HTTP /ping endpoint on <host_ip>:8080 and send Akka messages ("hey" in this code) to <host_ip>:9100 (akka.tcp://dockerexp@<host_ip>:1600/user/dockerexp)
+Configured this way you can curl the HTTP /ping endpoint on &lt;host_ip&gt;:9100 and send Akka messages ("hey" in this code) to &lt;host_ip&gt;:9101 (akka.tcp://dockerexp@<host_ip>:9101/user/dockerexp)
 
 All these pieces work together to feed Akka 2.4's new dual-binding scheme, which is key to making this all work inside Docker.  In application.conf the secret sauce is this phrase:
 
@@ -31,4 +34,5 @@ All these pieces work together to feed Akka 2.4's new dual-binding scheme, which
 			port     = ${settings.port}
 		}
 
-The hostname/port is the external (to Docker) binding.  This gets set to whatever the dockerhost IP is plus the port you pass in with optional env variable HOST_PORT (default 1600).  The bind- variants are IP/port internal to Docker, which basically you only care about if you're running other servers inside the same Docker.
+The bind- variants are IP/port internal to Docker, which basically you only care about if you're running other servers inside the same Docker, and in that case you would clearly need more ports than 2551.
+
