@@ -20,12 +20,9 @@ Docker has a RESTful facility built into its agent containing very useful inform
  2. Be sure your instances in AWS have security group policies that allow for access on ports your want to experiment with; 9100 and 9101 (for this Docker demo) for Akka and HTTP respectively.
  3. Create a new EC2 instance with Docker installed and add the following to the /etc/sysconfig/docker file on your target EC2 instance(s)
    ```OPTIONS="-H 0.0.0.0:5555 -H unix:///var/run/docker.sock"```
-   This will bind Docker's introspection information to port 5555 as a REST service.  **WARNING: This is insecure on an open network so be sure port 5555 is only accessible on this host!**
-   
+This will bind Docker's introspection information to port 5555 as a REST service.  **WARNING: This is insecure on an open network so be sure port 5555 is only accessible on this host!**
  4. You may want to create a snapshot of this EC2 instance with this modification to use as a ready  template for creating other Docker-ized instances.
- 5. Build and publish your Docker image from sbt with 
-   ```docker:publish```
-
+ 5. Build and publish your Docker image from sbt with docker:publish
 
 ### The Plan
 AWS's metadata can provide lots of nice information.  The host IPs (yes, there are more than 1) are of most interest to us.  Docker's RESTful information can tell us port mappings if we know the id of the running container (i.e. this Docker), so ultimately that's where the port information comes from.
@@ -80,19 +77,6 @@ Filter the container info list on the id (HOSTNAME) and look up the port mapping
 Now we have everything: the host's IP and the port.
 
 Lots of moving pieces but it all works.
-
-### Setup
-
- 1. Get a public Docker repository or some other place to host your Docker images.  I opted to use quay.io.  Accounts for public repos are free.  In Build.scala I configured this with:
-    ```dockerRepository := Some("quay.io/gzoller")```
-
- 2. Be sure your instances in AWS have security policies that allow for access on ports your want to experiment with; 9100 and 9101 (for this Docker demo) for Akka and HTTP respectively for our purposes here.
- 3. Add the following to the /etc/sysconfig/docker file on your target EC2 instance(s)
-   ```OPTIONS="-H 0.0.0.0:5555 -H unix:///var/run/docker.sock"```
-   This will bind Docker's introspection information to port 5555 as a REST service.  **WARNING: This is insecure on an open network so be sure port 5555 is only accessible locally!**
-   
- 4. Build and publish your Docker image from sbt with 
-   ```docker:publish```
 
 ### Running
 Log into your AWS instance (which should already have Docker installed) and follow these steps:
