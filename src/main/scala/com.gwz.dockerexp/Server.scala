@@ -1,8 +1,8 @@
 package com.gwz.dockerexp
 
-import akka.http.Http
-import akka.http.model._
-import akka.http.model.HttpMethods._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.HttpMethods._
 import akka.stream.scaladsl.{Flow,Sink,Source}
 import akka.stream.ActorFlowMaterializer
 import akka.util.Timeout
@@ -21,9 +21,6 @@ import scala.sys.process._
 
 trait DocSvr {
 	val ipAndPort = IpAndPort()
-	println("Host IP  : "+ipAndPort.hostIP)
-	println("Akka Port: "+ipAndPort.akkaPort)
-
 	val c = ConfigFactory.load()
 		.withValue("akka.remote.netty.tcp.bind-hostname", ConfigValueFactory.fromAnyRef(java.net.InetAddress.getLocalHost().getHostAddress()))
 		.withValue("akka.remote.netty.tcp.hostname", ConfigValueFactory.fromAnyRef(ipAndPort.hostIP))

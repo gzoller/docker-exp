@@ -20,6 +20,18 @@ import scala.util.Try
 		ECS ("ocean")		EC2			metadata svc	inspect agent
   */
 
+package object IpPort {
+	val AWS_LOCAL_HOST_IP  = "http://169.254.169.254/latest/meta-data/local-ipv4"
+	val AWS_PUBLIC_HOST_IP = "http://169.254.169.254/latest/meta-data/public-ipv4"
+	val INTERNAL_AKKA_PORT = 2551
+
+	val ENV_HOST_IP        = "HOST_IP"
+	val ENV_HOST_PORT      = "HOST_PORT"
+	val ENV_HOSTNAME       = "HOSTNAME"
+	val ENV_EXT_AKKA       = "EXT_AKKA"
+}
+import IpPort._
+
 case class IpAndPort() {
 	val baseAdaptor = {
 		val base = new EnvAdaptor(){}
@@ -33,8 +45,8 @@ case class IpAndPort() {
 }
 
 trait EnvAdaptor {
-	val hostIP   : Option[String] = Option(System.getenv().get("HOST_IP"))
-	val akkaPort : Option[Int]    = Option(System.getenv().get("HOST_PORT")).map(_.toInt)
+	val hostIP   : Option[String] = Option(System.getenv().get(ENV_HOST_IP))
+	val akkaPort : Option[Int]    = Option(System.getenv().get(ENV_HOST_PORT)).map(_.toInt)
 	def +( ea:EnvAdaptor ) : EnvAdaptor  = {
 		val left = this
 		new EnvAdaptor(){
@@ -43,34 +55,25 @@ trait EnvAdaptor {
 		}
 	}
 }
+
+// AWS EC2-specific Introspection
 case class AwsEnvAdaptor() extends EnvAdaptor {
 	private val sj = ScalaJack()
 
-	override val hostIP   : Option[String] = get("http://169.254.169.254/latest/meta-data/public-ipv4")
-	override val akkaPort : Option[Int]    = get("http://169.254.169.254/latest/meta-data/local-ipv4").flatMap(local => inspectPort(local))
-
-	def get(url:String) = Try {
-		val con = (new URL(url)).openConnection()
-		con.setConnectTimeout(3000)
-		con.setReadTimeout(3000)
-		val in = new BufferedReader(new InputStreamReader(con.getInputStream()))
-		var line = ""
-		var content = ""
-		do {
-			line = in.readLine()
-			if( line != null )
-				content = content+line
-		} while( line != null )
-		in.close
-		content
-	}.toOption
+	override val hostIP   : Option[String] = {
+		if( System.getenv().get(ENV_EXT_AKKA) == "true" )
+			Util.httpGetLite(AWS_PUBLIC_HOST_IP)  // Akka callable only outside AWS
+		else
+			Util.httpGetLite(AWS_LOCAL_HOST_IP)   // Akka callable only inside AWS
+	}
+	override val akkaPort : Option[Int] = Util.httpGetLite(AWS_LOCAL_HOST_IP).flatMap(local => inspectPort(local))
 
 	def inspectPort(hIp:String) : Option[Int] = {
-		val instId = System.getenv().get("HOSTNAME")
-		get(s"http://$hIp:5555/containers/json").flatMap( ins => {
+		val instId = System.getenv().get(ENV_HOSTNAME)
+		Util.httpGetLite(s"http://$hIp:5555/containers/json").flatMap( ins => {
 			Try {
 				val ob = sj.read[List[DockerInspect]](ins)
-				ob.find( _.Id.startsWith(instId) ).map(_.Ports.find( _.PrivatePort == 2551 ).map( _.PublicPort.get ).get ).get
+				ob.find( _.Id.startsWith(instId) ).map(_.Ports.find( _.PrivatePort == INTERNAL_AKKA_PORT ).map( _.PublicPort.get ).get ).get
 			}.toOption
 		})
 	}

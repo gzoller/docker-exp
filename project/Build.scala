@@ -18,8 +18,6 @@ object Build extends Build {
 		startYear 					:= Some(2014),
 		scalaVersion 				:= Scala,
 		parallelExecution in Test 	:= false,
-		fork in Test 				:= true,
-		javaOptions in Test         := Seq("-DINST_NAME=Fred", s"-DCLUSTER_IP=$IP", "-DCLUSTER_PORT=8100", "-DHTTP_PORT=8101"),
 		resolvers					++= Dependencies.resolutionRepos,
 		scalacOptions				:= Seq("-feature", "-deprecation", "-encoding", "UTF8", "-unchecked"),
 		testOptions in Test += Tests.Argument("-oDF"),
