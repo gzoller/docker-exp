@@ -48,6 +48,8 @@ case class HttpService(svr:DocSvr, iface:String, port:Int) {
 		case HttpRequest(GET, Uri.Path("/info"), _, _, _)  => {
 			val info = "Public IPV4: "+Util.httpGet( "http://169.254.169.254/latest/meta-data/public-ipv4" ) + // <<-- This one for AWS!  Host's IP
 				"\nUser: "+System.getProperty("user.name")+
+				"\nAkka URI: "+svr.akkaUri+
+				"\nHttp URI: "+svr.myHttpUri+
 				"\n"
 			HttpResponse(entity = info)
 		}

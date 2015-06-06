@@ -1,90 +1,72 @@
 # Working with AWS
 
-### Amazon and the Ocean
+## Amazon and the Ocean
 The normal, manual process of running a Docker-ized Akka application as described before will work fine on EC2.  However in AWS we can do much better!  Within EC2 there are facilities available that allow us to introspect the environment to get the host IP and running ports.
 
-AWS has a new container service, ECS, for automatically running and managing Docker containres.  I call this an "ocean" -- something into which we launch Docker containers.
+AWS has a new container service, ECS, for automatically running and managing Docker containers.  I call this an "ocean" -- something into which we launch Docker containers without regard to the instances they run on.
 
 The challenge with oceans is that they need to handle the port mappings for you (the ports we usually map manually with -p arguments).  This is because ECS may run &gt;1 instance of a container on the same machine so it needs control of port allocation.  Great for ECS--bad for Akka.
 
-You'll notice in the manual arrangement that we need to pass in the host IP and port for Akka's dual-binding.  How will we get this information in ECS?  We need to somehow obtain this information from *within a running Docker*.  The secret is to utilize all the introspection facilities available in Docker and EC2 to our advantage.  These are EC2-specific so they will not work in a non-Amazon environment.
+You'll notice in the manual arrangement that we need to pass in the host IP and port for Akka's dual-binding.  How will we get this information in ECS?  We need to somehow obtain this information from *inside* a running Docker.  The secret is to utilize all the introspection facilities available in Docker and EC2 to our advantage.  These are EC2-specific so they will not work in a non-Amazon environment.
 
-###Preparation
-To make the magic work we need to automatically figure out the host IP and the port from within Docker.  Remember, in an "ocean" environment we won't be able to pass this information in like we do when run manually.
+##The Idea
+We need 2 bits of information to make Akka's dual-binding magic work:  The IP of the host and the port Akka is bound to on the host (outside the docker).  Manually we passed this in but now we need to introspect this information from inside the Docker.
 
-Docker has a RESTful facility built into its agent containing very useful information.  It's exposed on a file system that isn't very user-friendly out-of-the-box.  I prefer to map this to a port so it can be accessed via HTTP, as shown in the steps below.  
+We'll use the AWS metadata service to get the host IP.  Actually we'll obtain 2 IPs: the local IP (useable from within EC2) and the public IP (visible outside EC2--and not visible inside EC2!).  Typically we'd only care about the local IP but for testing, or if you have an application that's building an Akka cluster across providers then this is useful.
 
- 1. Get a Docker repository to host your Docker images.  I opted to use quay.io.  In Build.scala I configured this with:
-    ```dockerRepository := Some("quay.io/gzoller")```
+Docker has a facility for introspecting all kinds of information about itself and this can be mapped to a port for RESTful access.  Note that this port should be secured via a group or policy so others can't see it!
 
- 2. Be sure your instances in AWS have security group policies that allow for access on ports your want to experiment with; 9100 and 9101 (for this Docker demo) for Akka and HTTP respectively.
- 3. Create a new EC2 instance with Docker installed and add the following to the /etc/sysconfig/docker file on your target EC2 instance(s)
-   ```OPTIONS="-H 0.0.0.0:5555 -H unix:///var/run/docker.sock"```
-This will bind Docker's introspection information to port 5555 as a REST service.  **WARNING: This is insecure on an open network so be sure port 5555 is only accessible on this host!**
- 4. You may want to create a snapshot of this EC2 instance with this modification to use as a ready  template for creating other Docker-ized instances.
- 5. Build and publish your Docker image from sbt with docker:publish
+The key info Docker introspection will give us lives on the /containers/json endpoint.  There we'll find port mappings, including mappings assigned by ECS.  Bingo!
 
-### The Plan
-AWS's metadata can provide lots of nice information.  The host IPs (yes, there are more than 1) are of most interest to us.  Docker's RESTful information can tell us port mappings if we know the id of the running container (i.e. this Docker), so ultimately that's where the port information comes from.
+## Ten Easy Steps
 
-First let's think about the host IP.  There are two: a local and a public IP.  The local IP is visible within AWS and the public IP is visible from outside AWS.  We need to use the right IP depending on what we need.
+### One
+Create a ECS-friendly IAM role.  There are more restrictive and secure permissions that will likely work, but IAMFullAccess  + AmazonEC2ContainerServiceFullAccess will be idiot-proof.
 
-The Scala code in the example uses these calls to determine the two host IPs from AWS:
+### Two (optional)
+Create and configure a VCP for your Docker "ocean".  The details of how to create a VPC are left to the reader but there's no specific magic here.  The default VPC will work fine for experimentation but in a real deployment you'll want your own VPC.
 
-http://169.254.169.254/latest/meta-data/local-ipv4
-http://169.254.169.254/latest/meta-data/public-ipv4
+### Three
+Create a specific security group for your Docker AMIs having open ports within the *assignment range*.  For added security you are advised to constraing inbound traffic to VPC-internal only, but that's up to you.
 
-The code will use one of these IPs to bind to Akka, but which?  
+The assignment range is the range of ports ECS will auto-assign for you.  To find out what these are you actually have to see how this is set up on your EC2 image, which we haven't come to yet, so there's a little chicken 'n egg thing here.  This information is found in the file /proc/sys/net/ipv4/ip_local_port_range.  The defaults are likely fine, but the range can be set manually with the command 
 
-If you want an Akka node running in a Docker container to be visible only from within AWS (i.e. Akka-to-Akka communication only inside AWS) then the local IP will be used.  If you need to send Akka messages from outside AWS use the public IP.  The local IP is used by default.  To use the public IP add the following to 'docker run':
+`sudo sysctl -w net.ipv4.ip_local_port_range="49153 65535"`
 
-    -e EXT_AKKA=true
+On my sample instances the default rage was 32768 - 61000.   Try this value in the security group (open ports in this range).
+         
+### Four
+Create a base AMI by starting with the EC2 ECS AMI (Amazon ECS-Optimized Amazon Linux AMI in the Amazon marketplace).  Launch the instance being sure to assign the IAM and security group you created!
 
-Next we need the port mapping to get the mapped port for Akka running inside the Docker container.  We will need to get the id of this running Docker container.  Conveniently (in EC2 at least) this is pre-assigned to the HOSTNAME environment variable inside the Docker.  Using this id we'll use our port 5555 service set up earlier to do this.
+Once it starts, log in and set up Docker introspection on port 5555.  **WARNING: This is insecure on an open network so be sure port 5555 is only accessible on this host!**  Edit the file /etc/sysconfig/docker adding the line:
 
-Using the local IP of the host we GET port :5555/containers/json to obtain information about all running containers.  The output from GET to port 5555 looks something like this:
+```OPTIONS="-H 0.0.0.0:5555 -H unix:///var/run/docker.sock"```
 
-    [
-      {
-        "Command": "bin/root",
-        "Created": 1432418467,
-        "Id": "743a9a256262e427e8d630c785dc0f7d3016e06fed94baf6988691a89198c642",
-        "Image": "quay.io/gzoller/root:latest",
-        "Labels": {},
-        "Names": [
-          "/serene_leakey"
-        ],
-        "Ports": [
-          {
-            "IP": "0.0.0.0",
-            "PrivatePort": 8080,
-            "PublicPort": 9100,
-            "Type": "tcp"
-          },
-          {
-            "IP": "0.0.0.0",
-            "PrivatePort": 2551,
-            "PublicPort": 9101,
-            "Type": "tcp"
-          }
-        ],
-        "Status": "Up Less than a second"
-      }
-    ]
+Restart and verify this works with:
 
-Filter the container info list on the id (HOSTNAME) and look up the port mapping for port 2551 (Akka default).  This is the port we'll use in the Akka URI for this node (9101 in this example, but will be whatever ECS uses when running in the ocean).
+```curl http://<host_ip>:5555/containers/json```
 
-Now we have everything: the host's IP and the port.
+You should see 1 block of information (for the running Amazon ECS agent).  Save a snapshot of this EC2 instance as your base AMI for Akka and Docker.
 
-Lots of moving pieces but it all works.
+### Five
+Run a couple more of these AMIs, again being sure to launch them with the IAM role and security group you set up.  This will be the initial pool of server resources available to your ocean.  If this is a "real" environment you have hopefully already set up a VPC so be sure to launch your instances configured to run in the desired VPC.
 
-### Running
-Log into your AWS instance (which should already have Docker installed) and follow these steps:
+### Six
+Create a new cluster if you're not interested in the default VPC/cluster.  Go to the ECS dashboard and confirm that your launched instances are running in the appropriate cluster.  If you launched instance into the default VPC you should see your instance already in the default cluster.  If not, you probably muffed the previous steps.
 
-```
-sudo docker run -d -p 9101:2551 -p 9100:8080 -e EXT_AKKA=true quay.io/gzoller/root
-```
+### Seven
+Create a new task with your Docker container's URI (quay.io/gzoller/root:latest) and for this example make sure ports 8080 and 2551 are mapped to host port 0 (auto-assigned).  Also add environment variable EXT_AKKA with value true so you can expose Akka external to ECS for testing.  In a real deployment you would not set  EXT_AKKA as you're likely only accessing Akka within the AWS universe.
 
-Where quay.io/gzoller would be the name of your Docker image.  You can now access the public IP of this instance and hit port &lt;ip&gt;:9100/ping for HTTP access and send message "hey" using Akka to &lt;ip&gt;:9101
+### Eight
+Start the task and wait.  Once started log onto an instance and do `sudo docker inspect <inst_id>` to see the port mappings that ECS assigned.
 
+### Nine
+From your local machine:
+
+    curl http://<public_ip>:<assigned_http_port>/ping
+
+You should see a sane 'pong' message.
+
+### Ten
+Test Akka with sbt test and fill in the instance's public IP and the assigned Akka and http ports you found with the docker inspect command in step Eight.  The test should work.
 
