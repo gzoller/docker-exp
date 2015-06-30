@@ -17,13 +17,14 @@ object Dependencies {
 	val akka_slf4j 		= "com.typesafe.akka" 		%% "akka-slf4j"		% Akka
 	val akka_remote		= "com.typesafe.akka" 		%% "akka-remote"	% Akka
 	val akka_cluster	= "com.typesafe.akka" 		%% "akka-cluster" 	% Akka
-	val akka_streams	= "com.typesafe.akka" 		%% "akka-stream-experimental" % "1.0-M2"
-	val akka_http		= "com.typesafe.akka" 		%% "akka-http-core-experimental" % "1.0-M2"	
-	val typesafe_config	= "com.typesafe"			% "config"				% Config
-	val scopt			= "com.github.scopt" 		%% "scopt" 				% Scopt
+	val akka_tools 		= "com.typesafe.akka"		%% "akka-cluster-tools" % Akka
+	val akka_streams	= "com.typesafe.akka" 		%% "akka-stream-experimental" % "1.0-RC3"
+	val akka_http		= "com.typesafe.akka" 		%% "akka-http-core-experimental" % "1.0-RC3"	
+	val typesafe_config	= "com.typesafe"			% "config"			% Config
 
-	val logback	        = "ch.qos.logback" 			% "logback-classic"		% Logback
+	val scalajack		= "co.blocke"				%% "scalajack"		% ScalaJack
+	val logback			= "ch.qos.logback" 			% "logback-classic"	% Logback
 
-	val scalatest 		= "org.scalatest" 			%% "scalatest"			% ScalaTest
-	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 		% Slf4j
+	val scalatest 		= "org.scalatest" 			%% "scalatest"		% ScalaTest
+	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 	% Slf4j
 }

@@ -55,7 +55,6 @@ case class NodeConfig(
 			.withFallback(config)
 			.resolve
 	}
-
 }
 
 object NodeConfig {
