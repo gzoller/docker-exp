@@ -51,6 +51,12 @@ object Build extends Build {
 		.enablePlugins(JavaAppPackaging)
 		.settings(Seq(mappings in Universal += file("go.sh") -> "bin/go.sh"):_*)
 		.settings(dockerStuff:_*)
+		.settings(Seq( // clean out extra CMD [] in Dockerfile
+			dockerCommands := dockerCommands.value.filterNot{
+				case ExecCmd("CMD",args @ _*) => true
+				case cmd => false
+			}
+			):_*)
 		.settings(Seq(dockerCommands += ExecCmd("CMD","bin/web")):_*)
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=

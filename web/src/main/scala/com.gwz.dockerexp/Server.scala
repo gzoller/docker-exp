@@ -17,10 +17,7 @@ import scala.sys.process._
 
 trait WebSvr {
 	val ssn = java.util.UUID.randomUUID.toString
-	println("Hello: "+ssn)
 	val c = ConfigFactory.load()
-	println("Got config")
-	val name = c.getString("settings.name")
 	implicit val system = ActorSystem( "dockerexp", c )
 	HttpService(this, java.net.InetAddress.getLocalHost().getHostAddress(), c.getInt("settings.http"))
 }
@@ -34,7 +31,9 @@ case class HttpService(svr:WebSvr, iface:String, port:Int) {
 	println("HTTP Service on port "+port)
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
-		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => HttpResponse(entity = s"""{"resp":"${svr.ssn} says pong"}""")
+		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => 
+	println("Request!")
+			HttpResponse(entity = s"""{"resp":"${svr.ssn} says pong"}""")
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 

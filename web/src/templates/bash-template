@@ -6,8 +6,6 @@ alias declare=''
 alias '-r'=''
 alias '-a'=''
 
-echo "Running template!"
-
 realpath () {
 (
   TARGET_FILE="$1"
