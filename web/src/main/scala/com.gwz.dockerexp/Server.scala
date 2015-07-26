@@ -10,21 +10,22 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 import scala.util.Try
-
 import akka.actor._
-import com.typesafe.config.{ Config, ConfigFactory, ConfigValueFactory }
-import scala.sys.process._
+import com.typesafe.config.ConfigFactory
 
-trait WebSvr {
+// Rediculously trivial HTTP endpoint server that calls into the cluster (as a cluster client)
+//
+object Go extends App {
+
+	val s = args.toList.toString
+	println(s"Args: $s")
+
 	val ssn = java.util.UUID.randomUUID.toString
 	val c = ConfigFactory.load()
+	val port = c.getInt("settings.http")
+	val iface = java.net.InetAddress.getLocalHost().getHostAddress()
+
 	implicit val system = ActorSystem( "dockerexp", c )
-	HttpService(this, java.net.InetAddress.getLocalHost().getHostAddress(), c.getInt("settings.http"))
-}
-
-case class HttpService(svr:WebSvr, iface:String, port:Int) {
-
-	implicit val system = svr.system
 	implicit val materializer = ActorFlowMaterializer()
 	implicit val t:Timeout = 15.seconds
 
@@ -32,8 +33,7 @@ case class HttpService(svr:WebSvr, iface:String, port:Int) {
 
 	val requestHandler: HttpRequest ⇒ HttpResponse = {
 		case HttpRequest(GET, Uri.Path("/ping"), _, _, _)  => 
-	println("Request!")
-			HttpResponse(entity = s"""{"resp":"${svr.ssn} says pong"}""")
+			HttpResponse(entity = s"""{"resp":"${ssn} says pong"}""")
 		case _: HttpRequest => HttpResponse(404, entity = "Unknown resource!")
 	}
 
@@ -45,5 +45,3 @@ case class HttpService(svr:WebSvr, iface:String, port:Int) {
 		// connection handleWith { Flow[HttpRequest] map requestHandler }
 	}).run()
 }
-
-object Go extends App with WebSvr

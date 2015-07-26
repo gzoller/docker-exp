@@ -1,5 +1,9 @@
 #!/usr/bin/env sh
 
+# This replacement for the default bash-template of sbt-native-packager is actually 
+# for use with ash, used by busybox, which doesn't have a lot of the more powerful
+# constructs of bash.
+
 # The bash stuff in sbt-native-packager generates all this "define -r ..." stuff.  ash can't handle it so
 # we just alias all that to ''. :-)
 alias declare=''
