@@ -2,7 +2,7 @@ object Versions {
 	
 	// NOTE: Stuck on Scala 2.10.4 until finagle-thrift achieves 2.11 capability
 	
-	val Akka            = "2.4-SNAPSHOT"
+	val Akka            = "2.4-M3"
 	val Config          = "1.2.1"
 	val JodaT           = "2.3"
 	val Logback         = "1.1.2"

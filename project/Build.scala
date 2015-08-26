@@ -3,7 +3,7 @@ import Keys._
 
 import com.typesafe.sbt.SbtNativePackager._
 import com.typesafe.sbt.packager.Keys._
-import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
+import com.typesafe.sbt.packager.archetypes._
 import com.typesafe.sbt.packager.docker._
 
 object Build extends Build {
@@ -25,43 +25,36 @@ object Build extends Build {
 	)
 
 	lazy val dockerStuff = Seq(
-		maintainer := "Greg Zoller <fake@nowhere.com>",
+		maintainer := "John Smith <fake@nowhere.com>",
 		dockerBaseImage := "errordeveloper/oracle-jre",
-		dockerEntrypoint := Seq("bin/go.sh"),
-		dockerRepository := Some("quay.io/gzoller"),  // Must log into quay.io from docker command-line before doing docker:publish!
-		dockerExposedPorts := Seq(2551,8080)
+		// This is a dummy repo for local-only testing.  In a real project you'd use something like quay.io and log in
+		// from the command line before doing docker:publish.
+		dockerRepository := Some("dockerexp"),  
+		dockerExposedPorts := Seq(2551,8080,2552)
 		)
 
 	lazy val root = Project(id = "dockerexp",
-		base = file(".")) aggregate(web)
+		base = file(".")) aggregate(cluster)
 
-/*
 	lazy val cluster = project.in(file("cluster"))
-		.enablePlugins(JavaAppPackaging)
+		.enablePlugins(AshScriptPlugin)
 		.settings(dockerStuff:_*)
+		.settings(dockerEntrypoint := Seq("bin/cluster"))
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_cluster, akka_remote, akka_slf4j, logback) ++ 
+				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_cluster, akka_tools, akka_contrib, akka_remote, akka_slf4j, logback) ++ 
 			dep_test(scalatest)
 		)
-*/
 
 	lazy val web = project.in(file("web"))
-		.enablePlugins(JavaAppPackaging)
-		.settings(Seq(mappings in Universal += file("go.sh") -> "bin/go.sh"):_*)
+		.enablePlugins(AshScriptPlugin)
 		.settings(dockerStuff:_*)
-		.settings(Seq( // clean out extra CMD [] in Dockerfile
-			dockerCommands := dockerCommands.value.filterNot{
-				case ExecCmd("CMD",args @ _*) => true
-				case cmd => false
-			}
-			):_*)
-		.settings(Seq(dockerCommands += ExecCmd("CMD","bin/web")):_*)
+		.settings(dockerEntrypoint := Seq("bin/web"))
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(
-				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_remote, akka_slf4j, logback) ++ 
+				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_remote, akka_tools, akka_slf4j, logback) ++ 
 			dep_test(scalatest)
 		)
 }

@@ -1,5 +1,0 @@
-docker run -p 9100:2551 -p 9101:8080 -d localhost:5000/root --seed --name Greg --hostIP 10.0.0.125 --hostPort 9100 --roles seed
-
-docker run -p 9200:2551 -p 9201:8080 -d localhost:5000/root --name Graham --hostIP 10.0.0.125 --hostPort 9200 --roles "node,n1" 10.0.0.125:9100
-
-docker run -p 9300:2551 -p 9301:8080 -d localhost:5000/root --name Garth --hostIP 10.0.0.125 --hostPort 9300 --roles "node,n2" 10.0.0.125:9100
