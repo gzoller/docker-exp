@@ -41,7 +41,6 @@ trait DocSvr {
 			+c.getString("akka.remote.netty.tcp.hostname")
 			+" port "
 			+c.getString("akka.remote.netty.tcp.port"))
-		// println("Local (inside) addr: "+java.net.InetAddress.getLocalHost().getHostAddress())
 		println("Seeds: "+c.getList("akka.cluster.seed-nodes").toList)
 		println("Roles: "+c.getList("akka.cluster.roles").toList)
 		val as = ActorSystem( clusterSystemName, c )

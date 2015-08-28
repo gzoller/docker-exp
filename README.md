@@ -1,5 +1,8 @@
 # Docker/Scala Experiments
 
+>**Project Note:**
+>This project relies on some very recent upgrades to sbt-native-packager.  This functionality has not been published to a repo yet, so this project will download and build the master branch of sbt-native-packager until such time as the 1.1 release is published.
+
 ### Akka Cluster Application
 This is the main event!  The goal is to be able to run Akka servers inside Docker containers and then connect them with Akka clustering.
 

@@ -31,6 +31,7 @@ object Build extends Build {
 		// from the command line before doing docker:publish.
 		dockerRepository := Some("dockerexp"),  
 		dockerExposedPorts := Seq(2551,8080,2552)
+		// test <<= test dependsOn (publishLocal in docker)
 		)
 
 	lazy val root = Project(id = "dockerexp",
@@ -38,6 +39,7 @@ object Build extends Build {
 
 	lazy val cluster = project.in(file("cluster"))
 		.enablePlugins(AshScriptPlugin)
+		.settings(isSnapshot := true)
 		.settings(dockerStuff:_*)
 		.settings(dockerEntrypoint := Seq("bin/cluster"))
 		.settings(basicSettings: _*)
@@ -46,15 +48,5 @@ object Build extends Build {
 				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_cluster, akka_tools, akka_contrib, akka_remote, akka_slf4j, logback) ++ 
 			dep_test(scalatest)
 		)
-
-	lazy val web = project.in(file("web"))
-		.enablePlugins(AshScriptPlugin)
-		.settings(dockerStuff:_*)
-		.settings(dockerEntrypoint := Seq("bin/web"))
-		.settings(basicSettings: _*)
-		.settings(libraryDependencies ++=
-			dep_compile(
-				typesafe_config, scalajack, akka_http, akka_streams, akka_actor, akka_remote, akka_tools, akka_slf4j, logback) ++ 
-			dep_test(scalatest)
-		)
+		.settings((Keys.test in Test) <<= (Keys.test in Test) dependsOn (publishLocal in Docker))
 }

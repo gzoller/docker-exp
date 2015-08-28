@@ -12,79 +12,100 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.language.postfixOps
 
+import scala.sys.process._
+import scala.util.Try
+
 package object MyAddr {
 	val myaddr = InetAddress.getLocalHost().getHostAddress()
 }
 import MyAddr._
 
-case class SeedServer() extends DocSvr {
-	override def appArgs = Array("--seed","--name","Fred","--hostIP",myaddr,"--hostPort","8100","--httpPort","8101")
-	init()
-}
-case class N1Server() extends DocSvr {
-	override def appArgs = Array("--name","Barney","--hostIP",myaddr,"--hostPort","8200","--httpPort","8201","--roles","node,n1",myaddr+":8100")
-	init()
-}
-case class N2Server() extends DocSvr {
-	override def appArgs = Array("--name","Wilma","--hostIP",myaddr,"--hostPort","8300","--httpPort","8301","--roles","node,n2",myaddr+":8100")
-	init()
-}
+class DockTests extends FunSpec with Matchers with BeforeAndAfterAll {
 
-class DockTests extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
-
-	val seed = SeedServer()
-	var n1:DocSvr = null
-	var n2:DocSvr = null
 	implicit val t:Timeout = 15.seconds
 
-	val testConfig = ConfigFactory parseString """
-		akka {
-			loglevel = "ERROR"
-			stdout-loglevel = "ERROR"
-			loggers = ["akka.event.slf4j.Slf4jLogger"]
-			actor {
-				provider = akka.remote.RemoteActorRefProvider
-			}
-			remote {
-				enabled-transports = ["akka.remote.netty.tcp"]
-			}
-		}"""
-	implicit val ss = ActorSystem("test",testConfig)
+	def get( uri:String ) = Try{scala.io.Source.fromURL(uri,"utf-8").getLines.fold("")( (a,b) => a + b )}.toOption
 
-	override def afterAll() {
-		Thread.sleep(1000)
-		stop(ss)
-		stop(seed.system)
-		stop(n1.system)
+	override def beforeAll() {
+	println("My IP: "+myaddr)
+		val seedCmd = s"""docker run --name test_seed --rm -p 9101:2551 -e HOST_IP=$myaddr -e HOST_PORT=9101 dockerexp/cluster seed"""
+		println("Seed: "+seedCmd)
+		Future(seedCmd.!)
+		Thread.sleep(7000)
+		val restCmd = s"""docker run --name test_rest --rm -p 9102:2551 -p 8080:8080 -e HOST_IP=$myaddr -e HOST_PORT=9102 dockerexp/cluster rest $myaddr:9101"""
+		println("Rest: "+restCmd)
+		Future(restCmd.!)
+		Thread.sleep(7000)
 	}
 
-	def stop( s:ActorSystem ) {
-		val whenTerminated = s.terminate
-		Await.result(whenTerminated, 5 seconds)
+	override def afterAll() {
+		s"""docker kill test_seed""".!
+		s"""docker kill test_rest""".!
+		s"""docker kill test_n1""".!
+		s"""docker kill test_n2""".!
 	}
 
 	describe("========= Test It!") {
 		it("should ping") {
-			println("Checking: "+seed.myHttpUri+"ping")
-			println( Util.httpGet( seed.myHttpUri+"ping" ) )
-		}
-		it("should akka") {
-			val actor = ss.actorSelection( seed.akkaUri+"/user/dockerexp" )
-			println( Await.result( (actor ? "hey").asInstanceOf[Future[String]], 7.seconds) )
+			val ping = get( s"""http://$myaddr:8080/ping""" )
+			println(s"Getting http://$myaddr:8080/ping produced $ping")
+			ping shouldBe defined
+			ping.get should fullyMatch regex """\{"resp":".* says pong"\}"""
 		}
 		it("should know its other nodes") {
-			n1 = N1Server()
-			n2 = N2Server()
-			Thread.sleep(2000)
-			Util.httpGet( n1.myHttpUri+"nodes" )._2.split(",").length should be(3)
+			Future( s"""docker run --name test_n1 --rm -p 9103:2551 -e HOST_IP=$myaddr -e HOST_PORT=9103 dockerexp/cluster logic $myaddr:9101""".! )
+			Future( s"""docker run --name test_n2 --rm -p 9104:2551 -e HOST_IP=$myaddr -e HOST_PORT=9104 dockerexp/cluster logic $myaddr:9101""".! )
+			Thread.sleep(7000)
+
+			val nodes = get(s"""http://$myaddr:8080/nodes""")
+			nodes shouldBe defined
+			nodes.get should fullyMatch regex """\{"nodes":"\[.*\]\}"""
+			nodes.get contains """:9101""" shouldBe true
+			nodes.get contains """:9102""" shouldBe true
+			nodes.get contains """:9103""" shouldBe true
+			nodes.get contains """:9104""" shouldBe true
 		}
-		it("send wire message") {
-			Util.httpGet( n1.myHttpUri+"wire" )._2 should equal("Wilma says 'you'")
+		it("should akka") {
+			val svc1 = get(s"""http://$myaddr:8080/svc""")
+			svc1 shouldBe defined
+			svc1.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+			val svc2 = get(s"""http://$myaddr:8080/svc""")
+			svc2 shouldBe defined
+			svc2.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+			val svc3 = get(s"""http://$myaddr:8080/svc""")
+			svc3 shouldBe defined
+			svc3.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+
+			// Make sure some load balancing is going on
+			val histogram = scala.collection.mutable.HashMap[String,Int]()  
+			val items = List(svc1.get,svc2.get,svc3.get)
+			items foreach { (x) => histogram += x -> (histogram.getOrElse(x, 0) + 1) }
+			histogram.values should contain( 2 )
+			histogram.values should contain( 1 )
 		}
 		it("kill one") {
-			stop(n2.system)
-			Thread.sleep(7000)
-			Util.httpGet( seed.myHttpUri+"nodes" )._2.split(",").length should be(2)
+			s"""docker kill test_n2""".!
+			Thread.sleep(15000) // let failure propagate
+			// Thread.sleep(10000) // let failure propagate
+			// println("Killed a node!!! XXXXXX")
+			// Thread.sleep(10000) // let failure 
+			// println("Let's move on...")
+			val svc1 = get(s"""http://$myaddr:8080/svc""")
+			svc1 shouldBe defined
+			svc1.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+			val svc2 = get(s"""http://$myaddr:8080/svc""")
+			svc2 shouldBe defined
+			svc2.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+			val svc3 = get(s"""http://$myaddr:8080/svc""")
+			svc3 shouldBe defined
+			svc3.get should fullyMatch regex """\{"cluster_node":".* says 'you'"\}"""
+
+			// Make sure some load balancing is going on
+			val histogram = scala.collection.mutable.HashMap[String,Int]()  
+			val items = List(svc1.get,svc2.get,svc3.get)
+			items foreach { (x) => histogram += x -> (histogram.getOrElse(x, 0) + 1) }
+			histogram.values.size shouldBe 1
+			histogram.values should contain( 3 )
 		}
 	}
 }
