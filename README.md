@@ -8,7 +8,7 @@ This is the main event!  The goal is to be able to run Akka servers inside Docke
 
 The basic problem is that Docker is designed to encapsulate the network.  See diagram below:
 
-![Akka Picture](file://akkadoc.jpg)
+![Akka Picture](akkadoc.jpg)
 
 Referencing the image, Akka's IP addresses/ports inside a Docker container are internal-only, and useless outside the container.  That's a big problem since Akka's protocol depends on a free flow of communication between nodes.
 
