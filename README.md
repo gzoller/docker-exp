@@ -4,6 +4,9 @@
 >This project relies on some very recent upgrades to sbt-native-packager.  This functionality has not been published to a repo yet, so this project will download and build the master branch of sbt-native-packager until such time as the 1.1 release is published.
 
 ### Akka Cluster Application
+
+NOTE: This second cluster branch is incompelte!  It is designed to test functionality using the new akka/base with Portster.
+
 This is the main event!  The goal is to be able to run Akka servers inside Docker containers and then connect them with Akka clustering.
 
 The basic problem is that Docker is designed to encapsulate the network.  See diagram below:
