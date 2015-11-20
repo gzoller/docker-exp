@@ -26,6 +26,7 @@ class DockTests extends FunSpec with Matchers with BeforeAndAfterAll {
 
 	def get( uri:String ) = Try{scala.io.Source.fromURL(uri,"utf-8").getLines.fold("")( (a,b) => a + b )}.toOption
 
+/*
 	override def beforeAll() {
 	println("My IP: "+myaddr)
 		val seedCmd = s"""docker run --name test_seed --rm -p 9101:2551 -e HOST_IP=$myaddr -e HOST_PORT=9101 dockerexp/cluster seed"""
@@ -42,16 +43,20 @@ class DockTests extends FunSpec with Matchers with BeforeAndAfterAll {
 		s"""docker kill test_seed""".!
 		s"""docker kill test_rest""".!
 		s"""docker kill test_n1""".!
-		s"""docker kill test_n2""".!
-	}
+		s""
+		*/
 
 	describe("========= Test It!") {
 		it("should ping") {
+			(pending)
+			/*
 			val ping = get( s"""http://$myaddr:8080/ping""" )
 			println(s"Getting http://$myaddr:8080/ping produced $ping")
 			ping shouldBe defined
 			ping.get should fullyMatch regex """\{"resp":".* says pong"\}"""
+			*/
 		}
+		/*
 		it("should know its other nodes") {
 			Future( s"""docker run --name test_n1 --rm -p 9103:2551 -e HOST_IP=$myaddr -e HOST_PORT=9103 dockerexp/cluster logic $myaddr:9101""".! )
 			Future( s"""docker run --name test_n2 --rm -p 9104:2551 -e HOST_IP=$myaddr -e HOST_PORT=9104 dockerexp/cluster logic $myaddr:9101""".! )
@@ -107,5 +112,6 @@ class DockTests extends FunSpec with Matchers with BeforeAndAfterAll {
 			histogram.values.size shouldBe 1
 			histogram.values should contain( 3 )
 		}
+		*/
 	}
 }

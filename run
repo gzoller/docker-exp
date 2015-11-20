@@ -1,0 +1,4 @@
+#!/bin/bash
+
+docker run -it -P -v /Users/wmy965/.docker/machine/certs:/mnt/certs -e DOCKER_TLS_VERIFY=true -e HOST_IP=192.168.99.100 dockerexp/cluster $@
+

@@ -14,7 +14,7 @@ class ClusterActor(svr:DocSvr) extends Actor {
 	// subscribe to cluster events
 	override def preStart():Unit = {
 		println("== Starting cluster listener 2 ==")
-		cluster.subscribe(self, initialStateMode = InitialStateAsEvents, classOf[MemberEvent], classOf[UnreachableMember])
+		cluster.subscribe(self, initialStateMode = InitialStateAsEvents, classOf[MemberEvent])
 			// classOf[MemberUp], classOf[MemberRemoved], classOf[UnreachableMember], classOf[MemberExited])
 	}
 

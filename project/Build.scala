@@ -26,12 +26,9 @@ object Build extends Build {
 
 	lazy val dockerStuff = Seq(
 		maintainer := "John Smith <fake@nowhere.com>",
-		dockerBaseImage := "errordeveloper/oracle-jre",
-		// This is a dummy repo for local-only testing.  In a real project you'd use something like quay.io and log in
-		// from the command line before doing docker:publish.
-		dockerRepository := Some("dockerexp"),  
-		dockerExposedPorts := Seq(2551,8080,2552)
-		// test <<= test dependsOn (publishLocal in docker)
+		dockerBaseImage := "gzoller/akka-base",
+		daemonUser in Docker  := "root",
+		dockerRepository := Some("dockerexp") 
 		)
 
 	lazy val root = Project(id = "dockerexp",
@@ -41,7 +38,11 @@ object Build extends Build {
 		.enablePlugins(AshScriptPlugin)
 		.settings(isSnapshot := true)
 		.settings(dockerStuff:_*)
-		.settings(dockerEntrypoint := Seq("bin/cluster"))
+		.settings(
+			dockerExposedPorts := Seq(2551,8080,2552),
+			dockerEntrypoint   := Seq("bin/cluster"),
+			packageName in Docker := "cluster"
+			)
 		.settings(basicSettings: _*)
 		.settings(libraryDependencies ++=
 			dep_compile(

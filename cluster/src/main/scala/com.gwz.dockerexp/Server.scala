@@ -61,6 +61,7 @@ trait DocSvr {
 
 case class SeedNode() extends DocSvr {
 	implicit val system = init(List(ipAndPort.hostIP+":"+ipAndPort.akkaPort))
+	system.actorOf(Props(new ClusterActor(this)), "cluster")
 }
 case class LogicNode(seedLoc : String) extends DocSvr {
 	implicit val system = init(List(seedLoc))
