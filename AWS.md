@@ -24,7 +24,7 @@ The key info Docker introspection will give us lives on the /containers/json end
 Create a ECS-friendly IAM role.  There are more restrictive and secure permissions that will likely work, but IAMFullAccess  + AmazonEC2ContainerServiceFullAccess will be idiot-proof.
 
 ### Two (optional)
-Create and configure a VCP for your Docker "ocean".  The details of how to create a VPC are left to the reader but there's no specific magic here.  The default VPC will work fine for experimentation but in a real deployment you'll want your own VPC.
+Create and configure a VPC for your Docker "ocean".  The details of how to create a VPC are left to the reader but there's no specific magic here.  The default VPC will work fine for experimentation but in a real deployment you'll want your own VPC.
 
 ### Three
 Create a specific security group for your Docker AMIs having open ports within the *assignment range*.  For added security you are advised to constraing inbound traffic to VPC-internal only, but that's up to you.
