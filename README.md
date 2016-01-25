@@ -33,7 +33,7 @@ Each node will be in a separate Docker container.
 
 Docker-ized Akka nodes will need two pieces of information from the host machine running the container: the host's IP and port.   This is information that Docker is actually tring to abstract/hide from you so you need to pass it in when you run the container.
 
-Here's how you'd start each of the nodes.  Node the argument passed to determine node type (seed, logic, or rest) and the fact we're passing in the seed node's IP.
+Here's how you'd start each of the nodes.  Note the argument passed to determine node type (seed, logic, or rest) and the fact we're passing in the seed node's IP.
 
 >**Seed Node**
 >docker run -p 9101:2551 --rm -e "HOST_IP=172.25.40.108" -e "HOST_PORT=9101" dockerexp/cluster seed
@@ -42,7 +42,9 @@ Here's how you'd start each of the nodes.  Node the argument passed to determine
 >docker run -p 9102:2551 -p 8080:8080 --rm -e "HOST_IP=172.25.40.108" -e "HOST_PORT=9102" dockerexp/cluster rest 172.25.40.108:9101
 
 >**Logic Nodes**
+
 >docker run -p 9103:2551 --rm -e "HOST_IP=172.25.40.108" -e "HOST_PORT=9103" dockerexp/cluster logic 172.25.40.108:9101
+
 >docker run -p 9104:2551 --rm -e "HOST_IP=172.25.40.108" -e "HOST_PORT=9104" dockerexp/cluster logic 172.25.40.108:9101
 
 In this example 172.25.401.108 is the IP of the host running the Docker containers (all on 1 box in my example, but it doesn't have to be).  Akka's default port 2551 is mapped to some port on the host with the -p Docker argument.  Both the host's IP and the port is passed into the Docker container as environment variables (-e argument).  Finally the seed IP:port is passed as an argument to the server code (172.25.40.108:9101).
@@ -81,7 +83,9 @@ Start the servers on AWS with the socket mapped to port 5555 as shown above.  No
 >docker run -p 9102:2551 -p 8080:8080 --rm dockerexp/cluster rest 172.25.40.108:9101
 
 >**Logic Nodes**
+
 >docker run -p 9103:2551 --rm dockerexp/cluster logic 172.25.40.108:9101
+
 >docker run -p 9104:2551 --rm dockerexp/cluster logic 172.25.40.108:9101
 
 This will start containers manually.  In a real-world example we would want to hand-start seed node(s) on known instances (IP:port).  You could then start REST + Logic nodes using ECS.  In ECS you can't assign the external ports (like 9103 above).  That will be inspected with the Docker ":5555" socket we exposed.  You'd just tell ECS you need to map internal port 2551 to something and it does the rest.
